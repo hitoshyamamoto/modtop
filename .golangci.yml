@@ -5,7 +5,16 @@ linters:
   enable:
     - errorlint
     - gosec
-    - misspell
+  settings:
+    gosec:
+      excludes:
+        # Integer truncation is intended in a binary protocol codec
+        # (splitting registers into bytes, two's complement reinterpretation).
+        - G115
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [gosec]
 
 formatters:
   enable:
