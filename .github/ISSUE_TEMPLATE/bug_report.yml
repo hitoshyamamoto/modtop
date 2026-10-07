@@ -1,0 +1,44 @@
+name: Bug report
+description: Something does not work as documented.
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: modtop version
+      description: Output of `modtop --version`.
+    validations:
+      required: true
+  - type: dropdown
+    id: transport
+    attributes:
+      label: Transport
+      options:
+        - Modbus TCP
+        - Modbus RTU
+    validations:
+      required: true
+  - type: input
+    id: command
+    attributes:
+      label: Command line
+      placeholder: modtop 10.1.8.99 -u 1 -r 40001-40020
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you expected and what you saw instead. Include the device model if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: frames
+    attributes:
+      label: Frames panel
+      description: Relevant lines from the frames panel (key `f`), if any.
+      render: text
+  - type: markdown
+    attributes:
+      value: |
+        Security issues must not be reported here. Use a private security advisory instead (see `SECURITY.md`).

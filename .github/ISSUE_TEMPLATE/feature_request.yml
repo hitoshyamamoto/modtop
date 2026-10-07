@@ -1,0 +1,43 @@
+name: Feature proposal
+description: Propose a change. Read GOVERNANCE.md first; speculative proposals are not evaluated.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: field-case
+    attributes:
+      label: Real field case
+      description: Equipment, situation and the current friction, described concretely.
+    validations:
+      required: true
+  - type: dropdown
+    id: verb
+    attributes:
+      label: Verb
+      options:
+        - Obtain (read data in more situations)
+        - Interpret (turn bytes into meaning)
+        - Diagnose (explain why something does not work)
+    validations:
+      required: true
+  - type: textarea
+    id: basic-usage
+    attributes:
+      label: Basic usage
+      description: Does the default behavior stay the same? Is the feature opt-in?
+    validations:
+      required: true
+  - type: textarea
+    id: maintenance
+    attributes:
+      label: Maintenance
+      description: How can it be tested in CI without hardware? Any new dependencies?
+  - type: textarea
+    id: contracts
+    attributes:
+      label: Contracts affected
+      description: CLI flags, exit codes, keyboard shortcuts.
+  - type: textarea
+    id: safety
+    attributes:
+      label: Operational safety
+      description: Does it transmit anything new on the bus or increase communication load?
