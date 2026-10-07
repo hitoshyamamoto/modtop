@@ -71,13 +71,13 @@ type ExceptionError struct {
 	Code     ExceptionCode
 }
 
-// Error returns e.g. "exception 02 · illegal data address".
+// Error returns e.g. "exc 02 · illegal data address".
 func (e *ExceptionError) Error() string {
 	name := []rune(e.Code.Name())
 	if len(name) > 0 && name[0] >= 'A' && name[0] <= 'Z' {
 		name[0] += 'a' - 'A'
 	}
-	return fmt.Sprintf("exception %02X · %s", byte(e.Code), string(name))
+	return fmt.Sprintf("exc %02X · %s", byte(e.Code), string(name))
 }
 
 // CRCError is an RTU frame whose CRC does not match its contents.

@@ -1,0 +1,24 @@
+ modtop · help
+ KEYS
+ 
+   ↑ ↓  k j        move (scroll the frames panel when it is open)
+   PgUp PgDn       page
+   Home End  g G   first / last address
+   t               cycle the type of the row
+   o               cycle the byte order of a 32-bit pair
+   c               cycle the address convention: Modicon → base 1 → base 0
+   f               open/close the frames panel
+   p               pause/resume polling
+   ?               open/close this help
+   Esc             close the panel or the help
+   q  Ctrl+C       quit
+ 
+ MODBUS ADDRESSING
+ 
+ The same register can appear in three forms in manuals:
+ 
+   Modicon   40001   the first digit tells the table (4 = holding register)
+   Base 1    1       numbering that starts at 1
+   Base 0    0       the address actually sent in the frame
+ 
+ ↑↓ scroll  ? or Esc close  q quit

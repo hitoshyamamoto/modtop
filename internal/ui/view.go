@@ -60,17 +60,23 @@ func (m Model) render() string {
 	if m.width < minWidth || m.height < minHeight {
 		return "Terminal too small (minimum 80×24)."
 	}
+	if m.help {
+		return m.renderHelp()
+	}
 	var lines []string
 	lines = append(lines, m.header())
 	lines = append(lines, "┌"+strings.Repeat("─", m.width-2)+"┐")
 	lines = append(lines, m.boxLine(" "+pad("Address", colAddr)+pad("Raw", colRaw)+pad("Type", colType)+"Value", false, false))
-	vis := m.visibleRows()
+	vis := m.listRows()
 	for i := m.top; i < m.top+vis; i++ {
 		if i < len(m.rows) {
 			lines = append(lines, m.rowLine(i))
 		} else {
 			lines = append(lines, m.boxLine("", false, false))
 		}
+	}
+	if m.frames {
+		lines = append(lines, m.frameLines()...)
 	}
 	lines = append(lines, "└"+strings.Repeat("─", m.width-2)+"┘")
 	lines = append(lines, " "+address.Translate(m.addr(m.sel), m.conv))
