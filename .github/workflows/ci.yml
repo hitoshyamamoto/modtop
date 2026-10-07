@@ -48,6 +48,10 @@ jobs:
         run: go vet ./...
       - name: Test
         run: go test -race ./...
+      - name: Fuzz (short)
+        run: |
+          go test ./internal/codec -run '^$' -fuzz '^FuzzDecodeTCP$' -fuzztime 30s
+          go test ./internal/codec -run '^$' -fuzz '^FuzzDecodeRTU$' -fuzztime 30s
       - name: Vulnerability check
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
 
