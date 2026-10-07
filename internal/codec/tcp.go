@@ -30,11 +30,11 @@ func EncodeTCP(r ReadRequest, transaction uint16) ([]byte, error) {
 // header must hold at least the first 6 bytes of the frame.
 func TCPFrameLen(header []byte) (int, error) {
 	if len(header) < 6 {
-		return 0, &MalformedError{Reason: "cabeçalho MBAP incompleto"}
+		return 0, &MalformedError{Reason: "incomplete MBAP header"}
 	}
 	length := int(binary.BigEndian.Uint16(header[4:]))
 	if length < 2 || length > maxTCPLength {
-		return 0, &MalformedError{Reason: fmt.Sprintf("campo length %d inválido", length)}
+		return 0, &MalformedError{Reason: fmt.Sprintf("invalid length field %d", length)}
 	}
 	return 6 + length, nil
 }
@@ -43,16 +43,16 @@ func TCPFrameLen(header []byte) (int, error) {
 // given transaction ID.
 func DecodeTCP(frame []byte, r ReadRequest, transaction uint16) (ReadResponse, error) {
 	if len(frame) < MBAPHeaderLen+2 {
-		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("frame TCP com %d bytes", len(frame))}
+		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("TCP frame of %d bytes", len(frame))}
 	}
 	if got := binary.BigEndian.Uint16(frame[0:]); got != transaction {
 		return ReadResponse{}, &MismatchError{Field: FieldTransaction, Want: int(transaction), Got: int(got)}
 	}
 	if proto := binary.BigEndian.Uint16(frame[2:]); proto != 0 {
-		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("protocol ID %d (esperado 0)", proto)}
+		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("protocol ID %d (expected 0)", proto)}
 	}
 	if length := int(binary.BigEndian.Uint16(frame[4:])); length != len(frame)-6 {
-		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("campo length %d, mas o frame tem %d bytes após ele", length, len(frame)-6)}
+		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("length field %d, but the frame has %d bytes after it", length, len(frame)-6)}
 	}
 	if frame[6] != r.Unit {
 		return ReadResponse{}, &MismatchError{Field: FieldUnit, Want: int(r.Unit), Got: int(frame[6])}

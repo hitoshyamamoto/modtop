@@ -57,7 +57,7 @@ func TestTCPSuccess(t *testing.T) {
 	if total != 2 || frames[0].Dir != TX || frames[1].Dir != RX {
 		t.Fatalf("frames = %+v", frames)
 	}
-	if frames[0].Note != "FC03 · PDU 2 · qtd 2" || frames[1].Note != "FC03 · 4 bytes · ok" {
+	if frames[0].Note != "FC03 · PDU 2 · qty 2" || frames[1].Note != "FC03 · 4 bytes · ok" {
 		t.Errorf("notes = %q, %q", frames[0].Note, frames[1].Note)
 	}
 	// Transaction IDs start at 1 and increment.
@@ -96,7 +96,7 @@ func TestTCPException(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 	frames, _ := log.Snapshot()
-	if got := frames[len(frames)-1].Note; got != "exceção 02 · endereço ilegal" {
+	if got := frames[len(frames)-1].Note; got != "exception 02 · illegal data address" {
 		t.Errorf("note = %q", got)
 	}
 }
@@ -153,7 +153,7 @@ func TestTCPStaleTransactionID(t *testing.T) {
 		t.Fatalf("got %v, %v", resp.Values, err)
 	}
 	frames, _ := log.Snapshot()
-	if len(frames) != 3 || !strings.Contains(frames[1].Note, "descartado") {
+	if len(frames) != 3 || !strings.Contains(frames[1].Note, "discarded") {
 		t.Errorf("frames = %+v", frames)
 	}
 }
@@ -171,7 +171,7 @@ func TestTCPReconnect(t *testing.T) {
 	}
 	// During the backoff no new connection is attempted.
 	before := dev.Requests()
-	if _, err := tr.Do(context.Background(), req(0, 1)); !errors.As(err, &ce) || !strings.Contains(err.Error(), "nova tentativa") {
+	if _, err := tr.Do(context.Background(), req(0, 1)); !errors.As(err, &ce) || !strings.Contains(err.Error(), "retrying in") {
 		t.Fatalf("during backoff: %v", err)
 	}
 	if dev.Requests() != before {
@@ -226,11 +226,11 @@ func TestDialErrors(t *testing.T) {
 	addr := ln.Addr().String()
 	_ = ln.Close()
 	_, err = DialTCP(context.Background(), addr, time.Second, nil)
-	if err == nil || !strings.Contains(err.Error(), "conexão recusada em "+addr) {
+	if err == nil || !strings.Contains(err.Error(), "connection refused at "+addr) {
 		t.Errorf("refused: %v", err)
 	}
 	_, err = DialTCP(context.Background(), "host.invalid:502", time.Second, nil)
-	if err == nil || !strings.Contains(err.Error(), "host não encontrado") {
+	if err == nil || !strings.Contains(err.Error(), "host not found") {
 		t.Errorf("not found: %v", err)
 	}
 }

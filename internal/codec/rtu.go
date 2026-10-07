@@ -54,7 +54,7 @@ func IsRTUException(function byte) bool {
 // DecodeRTU parses a Modbus RTU response frame to request r.
 func DecodeRTU(frame []byte, r ReadRequest) (ReadResponse, error) {
 	if len(frame) < RTUExceptionLen {
-		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("frame RTU com %d bytes", len(frame))}
+		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("RTU frame of %d bytes", len(frame))}
 	}
 	n := len(frame)
 	want := CRC16(frame[:n-2])

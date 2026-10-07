@@ -26,7 +26,7 @@ var ptyLine = regexp.MustCompile(`PTY is (\S+)`)
 func ptyPair(t *testing.T) (a, b string, pid int) {
 	t.Helper()
 	if _, err := exec.LookPath("socat"); err != nil {
-		t.Skip("socat não encontrado: instale socat para rodar os testes RTU")
+		t.Skip("socat not found: install socat to run the RTU tests")
 	}
 	cmd := exec.Command("socat", "-d", "-d", "pty,raw,echo=0", "pty,raw,echo=0")
 	stderr, err := cmd.StderrPipe()
@@ -137,7 +137,7 @@ func TestRTUBadCRC(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 	frames, _ := log.Snapshot()
-	if got := frames[len(frames)-1].Note; got != "CRC inválido" {
+	if got := frames[len(frames)-1].Note; got != "invalid CRC" {
 		t.Errorf("note = %q", got)
 	}
 }
@@ -147,7 +147,7 @@ func TestRTUEcho(t *testing.T) {
 	dev.SetFaults(sim.Faults{Echo: true})
 	_, err := r.Do(context.Background(), req(0, 1))
 	var echo *EchoError
-	if !errors.As(err, &echo) || !strings.Contains(err.Error(), "eco") {
+	if !errors.As(err, &echo) || !strings.Contains(err.Error(), "echoing") {
 		t.Fatalf("err = %v", err)
 	}
 	// Short responses (coils) must also detect the echo.
@@ -225,7 +225,7 @@ func TestPortScanFindsOtherProcess(t *testing.T) {
 	if !errors.As(err, &busy) || busy.PID != pid || busy.Process != "socat" {
 		t.Fatalf("err = %v, want busy by socat (%d)", err, pid)
 	}
-	want := "A porta " + a + " está em uso pelo processo " + strconv.Itoa(pid) + " (socat)."
+	want := "Port " + a + " is in use by process " + strconv.Itoa(pid) + " (socat)."
 	if !strings.HasPrefix(err.Error(), want) || !strings.Contains(err.Error(), "--force-port") {
 		t.Errorf("message = %q", err.Error())
 	}
@@ -301,7 +301,7 @@ func TestOpenErrors(t *testing.T) {
 		procRoot: t.TempDir(), lockDirs: []string{t.TempDir()}}
 	_, err := OpenRTU(cfg, nil)
 	var oe *PortOpenError
-	if !errors.As(err, &oe) || !strings.Contains(err.Error(), "não existe") {
+	if !errors.As(err, &oe) || !strings.Contains(err.Error(), "does not exist") {
 		t.Errorf("missing port: %v", err)
 	}
 	cfg.Port = "/dev/null"
@@ -313,7 +313,7 @@ func TestOpenErrors(t *testing.T) {
 		t.Error("bad parity accepted")
 	}
 	perm := (&PortOpenError{Port: "/dev/ttyUSB0", Err: syscall.EACCES}).Error()
-	if perm != "Sem permissão para /dev/ttyUSB0. Adicione seu usuário ao grupo dono da porta (geralmente \"dialout\") ou rode com sudo." {
+	if perm != "No permission for /dev/ttyUSB0. Add your user to the group that owns the port (usually \"dialout\") or run with sudo." {
 		t.Errorf("permission message = %q", perm)
 	}
 }

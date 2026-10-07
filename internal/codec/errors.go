@@ -22,45 +22,45 @@ const (
 func (c ExceptionCode) Name() string {
 	switch c {
 	case ExcIllegalFunction:
-		return "Função ilegal"
+		return "Illegal function"
 	case ExcIllegalDataAddress:
-		return "Endereço ilegal"
+		return "Illegal data address"
 	case ExcIllegalDataValue:
-		return "Valor ilegal"
+		return "Illegal data value"
 	case ExcServerDeviceFailure:
-		return "Falha no dispositivo"
+		return "Server device failure"
 	case ExcAcknowledge:
-		return "Confirmação (ACK)"
+		return "Acknowledge"
 	case ExcServerDeviceBusy:
-		return "Dispositivo ocupado"
+		return "Server device busy"
 	case ExcGatewayPathUnavailable:
-		return "Caminho de gateway indisponível"
+		return "Gateway path unavailable"
 	case ExcGatewayTargetNoReply:
-		return "Dispositivo atrás do gateway não respondeu"
+		return "Gateway target device failed to respond"
 	}
-	return fmt.Sprintf("Exceção desconhecida (0x%02X)", byte(c))
+	return fmt.Sprintf("Unknown exception (0x%02X)", byte(c))
 }
 
 // Hint returns advice for the user, or "" when there is none.
 func (c ExceptionCode) Hint() string {
 	switch c {
 	case ExcIllegalFunction:
-		return "O dispositivo não suporta esta função nesta tabela. Verifique se a tabela está correta."
+		return "The device does not support this function on this table. Check that the table is right."
 	case ExcIllegalDataAddress:
-		return "Causas comuns: tabela errada (3xxxx × 4xxxx) ou convenção base 0/base 1 trocada. " +
-			"Compare com os vizinhos na lista, confira o manual e reinicie com a faixa ou --convention corrigida."
+		return "Common cause: wrong table or a base 0/base 1 mix-up. " +
+			"Check the manual and restart with the corrected range or --convention."
 	case ExcIllegalDataValue:
-		return "A quantidade pedida pode ser grande demais para o dispositivo."
+		return "The requested quantity may be too large for the device."
 	case ExcServerDeviceFailure:
-		return "Erro interno do escravo."
+		return "Internal error in the slave."
 	case ExcAcknowledge:
-		return "Comando aceito, processamento demorado."
+		return "Request accepted; processing takes a while."
 	case ExcServerDeviceBusy:
-		return "Tente um intervalo maior."
+		return "Try a longer interval."
 	case ExcGatewayPathUnavailable:
-		return "O gateway não encontrou a rota para o escravo."
+		return "The gateway found no route to the slave."
 	case ExcGatewayTargetNoReply:
-		return "Verifique o unit ID e a comunicação serial do gateway."
+		return "Check the unit ID and the gateway's serial link."
 	}
 	return ""
 }
@@ -71,13 +71,13 @@ type ExceptionError struct {
 	Code     ExceptionCode
 }
 
-// Error returns e.g. "exceção 02 · endereço ilegal".
+// Error returns e.g. "exception 02 · illegal data address".
 func (e *ExceptionError) Error() string {
 	name := []rune(e.Code.Name())
 	if len(name) > 0 && name[0] >= 'A' && name[0] <= 'Z' {
 		name[0] += 'a' - 'A'
 	}
-	return fmt.Sprintf("exceção %02X · %s", byte(e.Code), string(name))
+	return fmt.Sprintf("exception %02X · %s", byte(e.Code), string(name))
 }
 
 // CRCError is an RTU frame whose CRC does not match its contents.
@@ -86,7 +86,7 @@ type CRCError struct {
 }
 
 func (e *CRCError) Error() string {
-	return "CRC inválido"
+	return "invalid CRC"
 }
 
 // Field identifies what did not match in a MismatchError.
@@ -96,8 +96,8 @@ type Field string
 const (
 	FieldTransaction Field = "transaction ID"
 	FieldUnit        Field = "unit ID"
-	FieldSlave       Field = "endereço do escravo"
-	FieldFunction    Field = "função"
+	FieldSlave       Field = "slave address"
+	FieldFunction    Field = "function"
 )
 
 // MismatchError is a response that does not belong to the request:
@@ -108,7 +108,7 @@ type MismatchError struct {
 }
 
 func (e *MismatchError) Error() string {
-	return fmt.Sprintf("resposta não corresponde ao pedido: %s %d (esperado %d)", e.Field, e.Got, e.Want)
+	return fmt.Sprintf("response does not match the request: %s %d (expected %d)", e.Field, e.Got, e.Want)
 }
 
 // MalformedError is a response with incoherent sizes or fields.
@@ -117,5 +117,5 @@ type MalformedError struct {
 }
 
 func (e *MalformedError) Error() string {
-	return "resposta malformada: " + e.Reason
+	return "malformed response: " + e.Reason
 }

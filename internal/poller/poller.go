@@ -387,15 +387,15 @@ func ShortReason(err error) string {
 	case errors.As(err, &te):
 		return "timeout"
 	case errors.As(err, &crc):
-		return "CRC inválido"
+		return "invalid CRC"
 	case errors.As(err, &mal):
-		return "resposta malformada"
+		return "malformed response"
 	case errors.As(err, &mis):
-		return "resposta trocada"
+		return "mismatched response"
 	case errors.As(err, &echo):
-		return "eco"
+		return "echo"
 	case errors.As(err, &conn):
-		return "sem conexão"
+		return "no connection"
 	}
-	return "erro"
+	return "error"
 }

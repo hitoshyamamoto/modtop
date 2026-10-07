@@ -10,6 +10,6 @@ import (
 var version = "dev"
 
 func main() {
-	fmt.Fprintf(os.Stderr, "modtop %s: em desenvolvimento\n", version)
+	fmt.Fprintf(os.Stderr, "modtop %s: under development\n", version)
 	os.Exit(1)
 }

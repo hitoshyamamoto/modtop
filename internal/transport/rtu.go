@@ -29,8 +29,8 @@ type RTUConfig struct {
 type EchoError struct{}
 
 func (e *EchoError) Error() string {
-	return "O adaptador RS-485 está devolvendo o eco do que foi transmitido.\n" +
-		"Esse adaptador não é suportado na v0.1. Verifique se ele tem modo de eco desativável."
+	return "The RS-485 adapter is echoing what is transmitted.\n" +
+		"This adapter is not supported in v0.1. Check whether its echo can be disabled."
 }
 
 // readSlice bounds each blocking read so cancellation is noticed quickly.
@@ -58,7 +58,7 @@ func OpenRTU(cfg RTUConfig, log *FrameLog) (*RTU, error) {
 	case 'O':
 		mode.Parity = serial.OddParity
 	default:
-		return nil, fmt.Errorf("paridade %q inválida: use N, E ou O", cfg.Parity)
+		return nil, fmt.Errorf("invalid parity %q: use N, E or O", cfg.Parity)
 	}
 	switch cfg.StopBits {
 	case 1:
@@ -66,7 +66,7 @@ func OpenRTU(cfg RTUConfig, log *FrameLog) (*RTU, error) {
 	case 2:
 		mode.StopBits = serial.TwoStopBits
 	default:
-		return nil, fmt.Errorf("stop bits %d inválido: use 1 ou 2", cfg.StopBits)
+		return nil, fmt.Errorf("invalid stop bits %d: use 1 or 2", cfg.StopBits)
 	}
 	if cfg.procRoot == "" {
 		cfg.procRoot = defaultProcRoot
@@ -120,7 +120,7 @@ func (r *RTU) Do(ctx context.Context, req codec.ReadRequest) (codec.ReadResponse
 
 	r.log.Add(Frame{At: time.Now(), Dir: TX, Raw: frame, Note: req.String()})
 	if _, err := r.port.Write(frame); err != nil {
-		return codec.ReadResponse{}, r.portFailed("escrever em", err)
+		return codec.ReadResponse{}, r.portFailed("write to", err)
 	}
 
 	raw, err := r.readResponse(ctx, req, frame)
@@ -147,7 +147,7 @@ func (r *RTU) readResponse(ctx context.Context, req codec.ReadRequest, sent []by
 	for {
 		if len(buf) >= len(sent) && bytes.Equal(buf[:len(sent)], sent) {
 			e := &EchoError{}
-			r.log.Add(Frame{At: time.Now(), Dir: RX, Raw: buf, Note: "eco do pedido"})
+			r.log.Add(Frame{At: time.Now(), Dir: RX, Raw: buf, Note: "request echo"})
 			return nil, e
 		}
 		need := codec.RTUExpectedLen(req)
@@ -169,7 +169,7 @@ func (r *RTU) readResponse(ctx context.Context, req codec.ReadRequest, sent []by
 			te := &TimeoutError{After: r.cfg.Timeout}
 			note := te.Error()
 			if len(buf) > 0 {
-				note = fmt.Sprintf("%s · %d de %d bytes", note, len(buf), need)
+				note = fmt.Sprintf("%s · %d of %d bytes", note, len(buf), need)
 			}
 			r.log.Add(Frame{At: time.Now(), Dir: RX, Raw: buf, Note: note})
 			return nil, te
@@ -177,14 +177,14 @@ func (r *RTU) readResponse(ctx context.Context, req codec.ReadRequest, sent []by
 		_ = r.port.SetReadTimeout(min(remaining, readSlice))
 		n, err := r.port.Read(tmp[:need-len(buf)])
 		if err != nil {
-			return nil, r.portFailed("ler de", err)
+			return nil, r.portFailed("read from", err)
 		}
 		buf = append(buf, tmp[:n]...)
 	}
 }
 
 func (r *RTU) portFailed(op string, err error) error {
-	ce := &ConnError{Msg: fmt.Sprintf("falha ao %s %s: %v. Verifique se o adaptador continua conectado.", op, r.cfg.Port, err), Err: err}
+	ce := &ConnError{Msg: fmt.Sprintf("failed to %s %s: %v. Check that the adapter is still connected.", op, r.cfg.Port, err), Err: err}
 	r.log.Add(Frame{At: time.Now(), Dir: RX, Note: ce.Msg})
 	return ce
 }

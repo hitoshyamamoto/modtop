@@ -79,20 +79,20 @@ func TestParseVectors(t *testing.T) {
 
 func TestAmbiguityMessage(t *testing.T) {
 	_, err := Parse("40001", Base0, tablePtr(HoldingRegister))
-	want := "\"40001\" parece um endereço na notação Modicon, mas a convenção atual é base 0.\n" +
-		"Use --convention modicon, ou confirme a convenção do manual do equipamento."
+	want := "\"40001\" looks like a Modicon address, but the current convention is base 0.\n" +
+		"Use --convention modicon, or check the convention in the device manual."
 	if err == nil || err.Error() != want {
 		t.Errorf("got %v\nwant %s", err, want)
 	}
 	_, err = Parse("30001", Base1, tablePtr(InputRegister))
-	if err == nil || !strings.Contains(err.Error(), "a convenção atual é base 1.") {
+	if err == nil || !strings.Contains(err.Error(), "the current convention is base 1.") {
 		t.Errorf("base 1 message: %v", err)
 	}
 }
 
 func TestHexMessage(t *testing.T) {
 	_, err := Parse("0x10", Base0, tablePtr(HoldingRegister))
-	if err == nil || !strings.Contains(err.Error(), "decimais") {
+	if err == nil || !strings.Contains(err.Error(), "decimal") {
 		t.Errorf("hex error should explain addresses are decimal: %v", err)
 	}
 }
@@ -175,15 +175,15 @@ func TestParseRange(t *testing.T) {
 		{in: "49990-410010", conv: Modicon, wantStart: Addr{HoldingRegister, 9989}, wantCount: 21},
 		{in: "0-249", conv: Base0, table: tablePtr(Coil), wantStart: Addr{Coil, 0}, wantCount: 250},
 		{in: " 1-10 ", conv: Base1, table: tablePtr(InputRegister), wantStart: Addr{InputRegister, 0}, wantCount: 10},
-		{in: "0-250", conv: Base0, table: tablePtr(Coil), wantErr: "o máximo é 250"},
-		{in: "30001-40010", conv: Modicon, wantErr: "mesma tabela"},
-		{in: "40020-40001", conv: Modicon, wantErr: "maior que o fim"},
-		{in: "40001", conv: Modicon, wantErr: "INICIO-FIM"},
-		{in: "40001-40002-40003", conv: Modicon, wantErr: "único hífen"},
-		{in: "40001 - 40002", conv: Modicon, wantErr: "espaços"},
-		{in: "40000-40002", conv: Modicon, wantErr: "início da faixa"},
-		{in: "40001-4", conv: Modicon, wantErr: "fim da faixa"},
-		{in: "40001-40002", conv: Base0, table: tablePtr(HoldingRegister), wantErr: "parece um endereço na notação Modicon"},
+		{in: "0-250", conv: Base0, table: tablePtr(Coil), wantErr: "the maximum is 250"},
+		{in: "30001-40010", conv: Modicon, wantErr: "same table"},
+		{in: "40020-40001", conv: Modicon, wantErr: "greater than the end"},
+		{in: "40001", conv: Modicon, wantErr: "START-END"},
+		{in: "40001-40002-40003", conv: Modicon, wantErr: "single hyphen"},
+		{in: "40001 - 40002", conv: Modicon, wantErr: "no spaces"},
+		{in: "40000-40002", conv: Modicon, wantErr: "range start"},
+		{in: "40001-4", conv: Modicon, wantErr: "range end"},
+		{in: "40001-40002", conv: Base0, table: tablePtr(HoldingRegister), wantErr: "looks like a Modicon address"},
 	}
 	for _, tt := range tests {
 		start, count, err := ParseRange(tt.in, tt.conv, tt.table)
@@ -211,12 +211,12 @@ func TestParseRange(t *testing.T) {
 
 func TestTranslate(t *testing.T) {
 	got := Translate(Addr{HoldingRegister, 2}, Modicon)
-	want := "40003 → Holding register nº 3 → FC03 → no fio: 2 (0x0002)"
+	want := "40003 → Holding register #3 → FC03 → on the wire: 2 (0x0002)"
 	if got != want {
 		t.Errorf("Translate = %q, want %q", got, want)
 	}
 	got = Translate(Addr{Coil, 0}, Base0)
-	want = "0 → Coil nº 1 → FC01 → no fio: 0 (0x0000)"
+	want = "0 → Coil #1 → FC01 → on the wire: 0 (0x0000)"
 	if got != want {
 		t.Errorf("Translate = %q, want %q", got, want)
 	}
