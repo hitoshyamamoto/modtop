@@ -42,7 +42,7 @@ func EncodeRTU(r ReadRequest) ([]byte, error) {
 
 // RTUExpectedLen returns the size of a normal RTU response to r.
 func RTUExpectedLen(r ReadRequest) int {
-	return 1 + 1 + 1 + r.dataLen() + 2
+	return 1 + 1 + 1 + r.DataLen() + 2
 }
 
 // IsRTUException reports whether the second byte of an RTU response
