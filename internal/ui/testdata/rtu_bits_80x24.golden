@@ -1,0 +1,24 @@
+ /dev/ttyUSB0 · unit 1 · 00001–00010         ⚠ FORCED PORT  ⏸ paused  ◐ degraded
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Address    Raw      Type      Value                                          │
+│▶00001      0        bool      0                                              │
+│ 00002      1        bool      1                                              │
+│ 00003      0        bool      0                                              │
+│ 00004      1        bool      1                                              │
+│ 00005      0        bool      0                                              │
+│ 00006      1        bool      1                                              │
+│ 00007      0        bool      0                                              │
+│ 00008      1        bool      1                                              │
+│ 00009      0        bool      0                                              │
+│ 00010      1        bool      1                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+ 00001 → Coil #1 → FC01 → on the wire: 0 (0x0000)
+
+ ok 3 · timeouts 0 · exceptions 0 · CRC 1 · cycle 0 ms
+
+
+ ↑↓ move  t type  o order  c convention  f frames  p pause  ? help  q quit

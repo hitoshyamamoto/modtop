@@ -47,8 +47,8 @@ func (c ExceptionCode) Hint() string {
 	case ExcIllegalFunction:
 		return "The device does not support this function on this table. Check that the table is right."
 	case ExcIllegalDataAddress:
-		return "Common cause: wrong table or a base 0/base 1 mix-up. " +
-			"Check the manual and restart with the corrected range or --convention."
+		return "Usually a wrong table or a base 0/base 1 mix-up. " +
+			"Check the manual; restart with the right range or --convention."
 	case ExcIllegalDataValue:
 		return "The requested quantity may be too large for the device."
 	case ExcServerDeviceFailure:

@@ -1,0 +1,24 @@
+ modtop · 10.1.8.99:502 · unit 1 · 40001–40020 · Modicon · 1s       ◌ connecting
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Address    Raw      Type      Value                                          │
+│▶40001      —        uint16    —                                              │
+│ 40002      —        uint16    —                                              │
+│ 40003      —        uint16    —                                              │
+│ 40004      —        uint16    —                                              │
+│ 40005      —        uint16    —                                              │
+│ 40006      —        uint16    —                                              │
+│ 40007      —        uint16    —                                              │
+│ 40008      —        uint16    —                                              │
+│ 40009      —        uint16    —                                              │
+│ 40010      —        uint16    —                                              │
+│ 40011      —        uint16    —                                              │
+│ 40012      —        uint16    —                                              │
+│ 40013      —        uint16    —                                              │
+│ 40014      —        uint16    —                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+ 40001 → Holding register #1 → FC03 → on the wire: 0 (0x0000)
+
+
+
+
+ ↑↓ move  t type  o order  c convention  f frames  p pause  ? help  q quit
