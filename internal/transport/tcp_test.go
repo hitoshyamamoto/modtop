@@ -96,7 +96,7 @@ func TestTCPException(t *testing.T) {
 		t.Fatalf("err = %v", err)
 	}
 	frames, _ := log.Snapshot()
-	if got := frames[len(frames)-1].Note; got != "exception 02 · illegal data address" {
+	if got := frames[len(frames)-1].Note; got != "exc 02 · illegal data address" {
 		t.Errorf("note = %q", got)
 	}
 }

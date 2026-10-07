@@ -44,7 +44,7 @@ func TestDecodeTCP(t *testing.T) {
 	if !errors.As(err, &exc) || exc.Code != ExcIllegalDataAddress {
 		t.Errorf("exception: got %v", err)
 	}
-	if err.Error() != "exception 02 · illegal data address" {
+	if err.Error() != "exc 02 · illegal data address" {
 		t.Errorf("exception text = %q", err.Error())
 	}
 

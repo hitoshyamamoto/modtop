@@ -451,3 +451,128 @@ func statusText(m Model) string {
 	s := m.statusLines()
 	return strings.TrimSpace(strings.TrimSpace(s[0]) + " " + strings.TrimSpace(s[1]))
 }
+
+// frameLog returns a log with n request/response pairs.
+func frameLog(n int) *poller.FrameLog {
+	log := transport.NewFrameLog()
+	for i := 0; i < n; i++ {
+		at := t0.Add(time.Duration(i) * time.Second)
+		log.Add(transport.Frame{At: at.Add(118 * time.Millisecond), Dir: transport.TX,
+			Raw: []byte{0, byte(i + 1), 0, 0, 0, 6, 1, 3, 0, 0, 0, 0x14}, Note: "FC03 · PDU 0 · qty 20"})
+		if i == n-1 {
+			log.Add(transport.Frame{At: at.Add(139 * time.Millisecond), Dir: transport.RX,
+				Raw: []byte{0, byte(i + 1), 0, 0, 0, 3, 1, 0x83, 2}, Note: "exc 02 · illegal data address"})
+			continue
+		}
+		raw := append([]byte{0, byte(i + 1), 0, 0, 0, 43, 1, 3, 40}, make([]byte, 40)...)
+		log.Add(transport.Frame{At: at.Add(141 * time.Millisecond), Dir: transport.RX, Raw: raw, Note: "FC03 · 40 bytes · ok"})
+	}
+	return log
+}
+
+func withLog(m Model, log *poller.FrameLog) Model {
+	m.log = log
+	return m
+}
+
+func TestGoldenFrames(t *testing.T) {
+	m := withLog(sampleModel(Options{}), frameLog(5))
+	m = keys(m, "f")
+	checkGolden(t, "frames_80x24", m.render())
+	if n := len(strings.Split(m.render(), "\n")); n != 24 {
+		t.Errorf("screen has %d lines, want 24", n)
+	}
+}
+
+func TestGoldenHelp(t *testing.T) {
+	m := keys(newTestModel(Options{}), "?")
+	checkGolden(t, "help_80x24", m.render())
+	for _, l := range helpLines() {
+		if width(" "+l) > 80 {
+			t.Errorf("help line too wide: %q", l)
+		}
+	}
+}
+
+func TestFramesScrolling(t *testing.T) {
+	m := withLog(sampleModel(Options{}), frameLog(10)) // 20 frames
+	m = keys(m, "f")
+	sel := m.sel
+	m = keys(m, "up", "up")
+	if m.sel != sel {
+		t.Error("arrows moved the list while the panel is open")
+	}
+	if m.frameEnd != 18 || !strings.Contains(m.render(), "frozen") {
+		t.Fatalf("frameEnd = %d", m.frameEnd)
+	}
+	// New frames do not move a frozen panel.
+	before := m.frameLines()
+	m.log.Add(transport.Frame{At: t0, Dir: transport.TX, Note: "new"})
+	if after := m.frameLines(); strings.Join(after[1:], "\n") != strings.Join(before[1:], "\n") {
+		t.Error("frozen panel moved with new frames")
+	}
+	// Scrolling far up stops at the oldest frames.
+	for i := 0; i < 50; i++ {
+		m = keys(m, "up")
+	}
+	if m.frameEnd != uint64(m.frameRows()) {
+		t.Errorf("frameEnd at top = %d, want %d", m.frameEnd, m.frameRows())
+	}
+	// Scrolling down to the newest frame resumes following.
+	for i := 0; i < 50; i++ {
+		m = keys(m, "down")
+	}
+	if m.frameEnd != 0 || !strings.Contains(m.render(), "frames · live") {
+		t.Errorf("frameEnd = %d after scrolling down", m.frameEnd)
+	}
+	// The selection stays visible in the smaller list.
+	m = keys(m, "G")
+	if m.sel < m.top || m.sel >= m.top+m.listRows() {
+		t.Error("selection hidden with the panel open")
+	}
+	m = send(m, tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.frames {
+		t.Error("Esc did not close the panel")
+	}
+}
+
+func TestHelpKeys(t *testing.T) {
+	m := keys(newTestModel(Options{}), "f", "?")
+	if !m.help {
+		t.Fatal("? did not open help")
+	}
+	m = keys(m, "t", "down", "down")
+	if m.rows[0].typ != decode.Uint16 || m.helpTop != 2 {
+		t.Errorf("keys under help: type %v, helpTop %d", m.rows[0].typ, m.helpTop)
+	}
+	m = send(m, tea.KeyPressMsg{Code: tea.KeyEscape})
+	if m.help || !m.frames {
+		t.Error("Esc should close help first, keeping the panel")
+	}
+	m = keys(m, "?", "?")
+	if m.help {
+		t.Error("? did not close help")
+	}
+	_, cmd := keys(m, "?").Update(key("q"))
+	if cmd == nil {
+		t.Error("q should quit from the help screen")
+	}
+}
+
+func TestLongFrameTruncated(t *testing.T) {
+	log := transport.NewFrameLog()
+	log.Add(transport.Frame{At: t0, Dir: transport.RX, Raw: make([]byte, 255), Note: "FC03 · 250 bytes · ok"})
+	m := keys(withLog(newTestModel(Options{}), log), "f")
+	found := false
+	for _, l := range m.frameLines() {
+		if strings.Contains(l, "...") && strings.Contains(l, "FC03 · 250 bytes · ok") {
+			found = true
+		}
+		if width(l) != 80 {
+			t.Errorf("frame line is %d columns", width(l))
+		}
+	}
+	if !found {
+		t.Error("long frame not truncated with ...")
+	}
+}

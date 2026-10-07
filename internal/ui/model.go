@@ -71,6 +71,11 @@ type Model struct {
 	conv   address.Convention
 	status string
 
+	frames   bool   // frames panel open
+	frameEnd uint64 // last frame shown when the panel is frozen; 0 follows new frames
+	help     bool
+	helpTop  int
+
 	result    poller.CycleResult
 	hasResult bool
 	silent    int // consecutive cycles in which nothing answered
@@ -149,14 +154,45 @@ func (m Model) key(k string) (tea.Model, tea.Cmd) {
 			m.quitCode = 130
 		}
 		return m, tea.Quit
+	case "?":
+		m.help = !m.help
+		m.helpTop = 0
+		return m, nil
+	case "esc":
+		if m.help {
+			m.help = false
+		} else {
+			m.frames = false
+		}
+		m.scroll()
+		return m, nil
+	}
+	if m.help {
+		switch k {
+		case "up", "k":
+			m.helpTop = max(0, m.helpTop-1)
+		case "down", "j":
+			m.helpTop = min(m.helpTop+1, max(0, len(helpLines())-(m.height-2)))
+		}
+		return m, nil
+	}
+	switch k {
 	case "up", "k":
-		m.move(-1)
+		if m.frames {
+			m.scrollFrames(-1)
+		} else {
+			m.move(-1)
+		}
 	case "down", "j":
-		m.move(1)
+		if m.frames {
+			m.scrollFrames(1)
+		} else {
+			m.move(1)
+		}
 	case "pgup":
-		m.move(-m.visibleRows())
+		m.move(-m.listRows())
 	case "pgdown":
-		m.move(m.visibleRows())
+		m.move(m.listRows())
 	case "home", "g":
 		m.move(-len(m.rows))
 	case "end", "G":
@@ -167,6 +203,10 @@ func (m Model) key(k string) (tea.Model, tea.Cmd) {
 		m.cycleOrder()
 	case "c":
 		m.conv = m.conv.Next()
+	case "f":
+		m.frames = !m.frames
+		m.frameEnd = 0
+		m.scroll()
 	case "p":
 		if m.ctl != nil {
 			m.ctl.SetPaused(!m.ctl.Paused())
@@ -182,7 +222,7 @@ func (m *Model) move(delta int) {
 
 // scroll keeps the selected row visible.
 func (m *Model) scroll() {
-	vis := m.visibleRows()
+	vis := m.listRows()
 	if vis < 1 {
 		return
 	}
