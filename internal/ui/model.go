@@ -81,6 +81,7 @@ type Model struct {
 	silent    int // consecutive cycles in which nothing answered
 
 	quitCode int
+	started  chan struct{} // closed once the program is running
 }
 
 // NewModel returns the initial state.
@@ -109,8 +110,17 @@ type resultMsg poller.CycleResult
 // quitMsg asks the UI to exit with the given process exit code.
 type quitMsg struct{ code int }
 
-// Init implements tea.Model.
-func (m Model) Init() tea.Cmd { return nil }
+// Init implements tea.Model. It signals that the program is running.
+func (m Model) Init() tea.Cmd {
+	if m.started == nil {
+		return nil
+	}
+	ch := m.started
+	return func() tea.Msg {
+		close(ch)
+		return nil
+	}
+}
 
 // Update implements tea.Model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {

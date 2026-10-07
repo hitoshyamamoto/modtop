@@ -56,15 +56,26 @@ func run(ctx context.Context, opts Options, src Source, log *poller.FrameLog, pr
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	prog := tea.NewProgram(NewModel(opts, src, log), append([]tea.ProgramOption{tea.WithoutSignalHandler()}, progOpts...)...)
+	// The goroutines below may kill the program, which is only safe once
+	// it is running: they wait for the model's Init to signal it.
+	started := make(chan struct{})
+	model := NewModel(opts, src, log)
+	model.started = started
+	prog := tea.NewProgram(model, append([]tea.ProgramOption{tea.WithoutSignalHandler()}, progOpts...)...)
 
 	var (
 		mu       sync.Mutex
 		panicErr *PanicError
 		sigCode  int
 	)
-	// guard runs fn and turns a panic into a clean shutdown.
+	// guard waits for the program to start, runs fn and turns a panic
+	// into a clean shutdown.
 	guard := func(fn func()) {
+		select {
+		case <-started:
+		case <-ctx.Done():
+			return
+		}
 		defer func() {
 			if r := recover(); r != nil {
 				mu.Lock()
