@@ -21,8 +21,7 @@ const (
 	HoldingRegister
 )
 
-// String returns the table name shown in the UI. The names are kept in
-// English on purpose: they are the ones printed in device manuals.
+// String returns the table name shown in the UI, as printed in device manuals.
 func (t Table) String() string {
 	switch t {
 	case Coil:
@@ -154,8 +153,8 @@ type AmbiguityError struct {
 }
 
 func (e *AmbiguityError) Error() string {
-	return fmt.Sprintf("%q parece um endereço na notação Modicon, mas a convenção atual é %s.\n"+
-		"Use --convention modicon, ou confirme a convenção do manual do equipamento.",
+	return fmt.Sprintf("%q looks like a Modicon address, but the current convention is %s.\n"+
+		"Use --convention modicon, or check the convention in the device manual.",
 		e.Input, e.Convention)
 }
 
@@ -173,23 +172,23 @@ func Parse(s string, c Convention, table *Table) (Addr, error) {
 		return parseModicon(s)
 	case Base1, Base0:
 		if table == nil || !table.Valid() {
-			return Addr{}, errors.New("tabela não informada: com base 0 ou base 1 é preciso dizer a tabela (--table holding, input, coil ou discrete)")
+			return Addr{}, errors.New("table not given: base 0 and base 1 need the table (--table holding, input, coil or discrete)")
 		}
 		return parsePlain(s, c, *table)
 	}
-	return Addr{}, fmt.Errorf("convenção desconhecida (%d)", uint8(c))
+	return Addr{}, fmt.Errorf("unknown convention (%d)", uint8(c))
 }
 
 func checkDigits(s string) error {
 	if s == "" {
-		return errors.New("endereço vazio: informe um endereço decimal, ex.: 40001")
+		return errors.New("empty address: enter a decimal address, e.g. 40001")
 	}
 	if len(s) > 1 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X') {
-		return fmt.Errorf("endereço %q em hexadecimal não é aceito: endereços devem ser decimais, como aparecem no manual", s)
+		return fmt.Errorf("hexadecimal address %q is not accepted: addresses must be decimal, as printed in the manual", s)
 	}
 	for i := 0; i < len(s); i++ {
 		if s[i] < '0' || s[i] > '9' {
-			return fmt.Errorf("endereço %q inválido: use apenas dígitos decimais", s)
+			return fmt.Errorf("invalid address %q: use decimal digits only", s)
 		}
 	}
 	return nil
@@ -197,11 +196,11 @@ func checkDigits(s string) error {
 
 func parseModicon(s string) (Addr, error) {
 	if len(s) != 5 && len(s) != 6 {
-		return Addr{}, fmt.Errorf("endereço Modicon %q deve ter 5 ou 6 dígitos (ex.: 40001 ou 400001)", s)
+		return Addr{}, fmt.Errorf("address %q in Modicon notation must have 5 or 6 digits (e.g. 40001 or 400001)", s)
 	}
 	t, ok := tableFromPrefix(s[0])
 	if !ok {
-		return Addr{}, fmt.Errorf("endereço Modicon %q tem prefixo %c inválido: o 1º dígito deve ser 0 (coil), 1 (discrete input), 3 (input register) ou 4 (holding register)", s, s[0])
+		return Addr{}, fmt.Errorf("address %q in Modicon notation has an invalid prefix %c: the first digit must be 0 (coil), 1 (discrete input), 3 (input register) or 4 (holding register)", s, s[0])
 	}
 	n, _ := strconv.Atoi(s[1:]) // digits already validated; at most 5 of them
 	maxN := 9999
@@ -209,10 +208,10 @@ func parseModicon(s string) (Addr, error) {
 		maxN = 65536
 	}
 	if n < 1 {
-		return Addr{}, fmt.Errorf("endereço Modicon %q não existe: a numeração começa em 1 (o primeiro é %c%0*d)", s, s[0], len(s)-1, 1)
+		return Addr{}, fmt.Errorf("address %q in Modicon notation does not exist: numbering starts at 1 (the first one is %c%0*d)", s, s[0], len(s)-1, 1)
 	}
 	if n > maxN {
-		return Addr{}, fmt.Errorf("endereço Modicon %q fora da faixa: com %d dígitos o número vai de 1 a %d", s, len(s), maxN)
+		return Addr{}, fmt.Errorf("address %q in Modicon notation is out of range: with %d digits the number goes from 1 to %d", s, len(s), maxN)
 	}
 	return Addr{Table: t, PDU: uint16(n - 1)}, nil
 }
@@ -227,12 +226,12 @@ func parsePlain(s string, c Convention, t Table) (Addr, error) {
 	}
 	if c == Base1 {
 		if v < 1 || v > 65536 {
-			return Addr{}, fmt.Errorf("endereço %q fora da faixa: em base 1 vai de 1 a 65536", s)
+			return Addr{}, fmt.Errorf("address %q out of range: base 1 goes from 1 to 65536", s)
 		}
 		return Addr{Table: t, PDU: uint16(v - 1)}, nil
 	}
 	if v > 65535 {
-		return Addr{}, fmt.Errorf("endereço %q fora da faixa: em base 0 vai de 0 a 65535", s)
+		return Addr{}, fmt.Errorf("address %q out of range: base 0 goes from 0 to 65535", s)
 	}
 	return Addr{Table: t, PDU: uint16(v)}, nil
 }
@@ -242,36 +241,36 @@ func parsePlain(s string, c Convention, t Table) (Addr, error) {
 func ParseRange(s string, c Convention, table *Table) (start Addr, count int, err error) {
 	s = strings.TrimSpace(s)
 	if strings.ContainsAny(s, " \t") {
-		return Addr{}, 0, fmt.Errorf("faixa %q inválida: não use espaços; o formato é INICIO-FIM, ex.: 40001-40020", s)
+		return Addr{}, 0, fmt.Errorf("invalid range %q: no spaces allowed; the format is START-END, e.g. 40001-40020", s)
 	}
 	parts := strings.Split(s, "-")
 	if len(parts) != 2 {
-		return Addr{}, 0, fmt.Errorf("faixa %q inválida: use o formato INICIO-FIM com um único hífen, ex.: 40001-40020", s)
+		return Addr{}, 0, fmt.Errorf("invalid range %q: use the START-END format with a single hyphen, e.g. 40001-40020", s)
 	}
 	start, err = Parse(parts[0], c, table)
 	if err != nil {
-		return Addr{}, 0, fmt.Errorf("início da faixa: %w", err)
+		return Addr{}, 0, fmt.Errorf("range start: %w", err)
 	}
 	end, err := Parse(parts[1], c, table)
 	if err != nil {
-		return Addr{}, 0, fmt.Errorf("fim da faixa: %w", err)
+		return Addr{}, 0, fmt.Errorf("range end: %w", err)
 	}
 	if start.Table != end.Table {
-		return Addr{}, 0, fmt.Errorf("faixa %q inválida: o início é %s e o fim é %s; os dois extremos devem estar na mesma tabela", s, start.Table, end.Table)
+		return Addr{}, 0, fmt.Errorf("invalid range %q: the start is a %s and the end is a %s; both ends must be in the same table", s, start.Table, end.Table)
 	}
 	if start.PDU > end.PDU {
-		return Addr{}, 0, fmt.Errorf("faixa %q inválida: o início é maior que o fim; inverta os extremos", s)
+		return Addr{}, 0, fmt.Errorf("invalid range %q: the start is greater than the end; swap them", s)
 	}
 	count = int(end.PDU) - int(start.PDU) + 1
 	if count > MaxRange {
-		return Addr{}, 0, fmt.Errorf("faixa %q tem %d endereços; o máximo é %d. Divida a leitura em faixas menores", s, count, MaxRange)
+		return Addr{}, 0, fmt.Errorf("range %q has %d addresses; the maximum is %d. Split the reading into smaller ranges", s, count, MaxRange)
 	}
 	return start, count, nil
 }
 
 // Translate returns the translation line shown in the UI footer, e.g.
-// "40003 → Holding register nº 3 → FC03 → no fio: 2 (0x0002)".
+// "40003 → Holding register #3 → FC03 → on the wire: 2 (0x0002)".
 func Translate(a Addr, c Convention) string {
-	return fmt.Sprintf("%s → %s nº %d → FC%02d → no fio: %d (0x%04X)",
+	return fmt.Sprintf("%s → %s #%d → FC%02d → on the wire: %d (0x%04X)",
 		Format(a, c), a.Table, int(a.PDU)+1, a.Table.ReadFunction(), a.PDU, a.PDU)
 }

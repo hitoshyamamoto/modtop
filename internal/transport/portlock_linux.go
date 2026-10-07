@@ -26,17 +26,17 @@ type PortBusyError struct {
 }
 
 func (e *PortBusyError) Error() string {
-	who := "por outro processo"
+	who := "another process"
 	if e.PID > 0 {
-		who = fmt.Sprintf("pelo processo %d (%s)", e.PID, e.Process)
+		who = fmt.Sprintf("process %d (%s)", e.PID, e.Process)
 	}
 	if e.Forced {
-		return fmt.Sprintf("A porta %s está bloqueada em modo exclusivo %s.\n"+
-			"Nem --force-port consegue abri-la sem privilégios de root.", e.Port, who)
+		return fmt.Sprintf("Port %s is locked in exclusive mode by %s.\n"+
+			"Not even --force-port can open it without root privileges.", e.Port, who)
 	}
-	return fmt.Sprintf("A porta %s está em uso %s.\n"+
-		"Modbus RTU admite apenas um mestre por barramento; usar a porta agora pode\n"+
-		"corromper a comunicação de produção. Use --force-port somente se tiver certeza.", e.Port, who)
+	return fmt.Sprintf("Port %s is in use by %s.\n"+
+		"Modbus RTU allows a single master per bus; using the port now may\n"+
+		"corrupt production traffic. Use --force-port only if you are sure.", e.Port, who)
 }
 
 // PortOpenError means the serial port could not be opened (missing,
@@ -49,13 +49,13 @@ type PortOpenError struct {
 func (e *PortOpenError) Error() string {
 	switch {
 	case errors.Is(e.Err, unix.ENOENT):
-		return fmt.Sprintf("A porta %s não existe. Verifique se o adaptador está conectado e o nome da porta (ls /dev/ttyUSB* /dev/ttyACM* /dev/ttyS*).", e.Port)
+		return fmt.Sprintf("Port %s does not exist. Check that the adapter is connected and the port name (ls /dev/ttyUSB* /dev/ttyACM* /dev/ttyS*).", e.Port)
 	case errors.Is(e.Err, unix.EACCES), errors.Is(e.Err, unix.EPERM):
-		return fmt.Sprintf("Sem permissão para %s. Adicione seu usuário ao grupo dono da porta (geralmente \"dialout\") ou rode com sudo.", e.Port)
+		return fmt.Sprintf("No permission for %s. Add your user to the group that owns the port (usually \"dialout\") or run with sudo.", e.Port)
 	case errors.Is(e.Err, unix.ENOTTY):
-		return fmt.Sprintf("%s não é uma porta serial. Verifique o caminho informado.", e.Port)
+		return fmt.Sprintf("%s is not a serial port. Check the path.", e.Port)
 	}
-	return fmt.Sprintf("Falha ao abrir %s: %v. Verifique o adaptador e o nome da porta.", e.Port, e.Err)
+	return fmt.Sprintf("Failed to open %s: %v. Check the adapter and the port name.", e.Port, e.Err)
 }
 
 func (e *PortOpenError) Unwrap() error { return e.Err }

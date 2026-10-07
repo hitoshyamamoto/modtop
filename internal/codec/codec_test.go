@@ -44,7 +44,7 @@ func TestDecodeTCP(t *testing.T) {
 	if !errors.As(err, &exc) || exc.Code != ExcIllegalDataAddress {
 		t.Errorf("exception: got %v", err)
 	}
-	if err.Error() != "exceção 02 · endereço ilegal" {
+	if err.Error() != "exception 02 · illegal data address" {
 		t.Errorf("exception text = %q", err.Error())
 	}
 
@@ -194,10 +194,10 @@ func TestQuantityLimits(t *testing.T) {
 }
 
 func TestExceptionNames(t *testing.T) {
-	if got := ExceptionCode(0x0B).Name(); got != "Dispositivo atrás do gateway não respondeu" {
+	if got := ExceptionCode(0x0B).Name(); got != "Gateway target device failed to respond" {
 		t.Errorf("0B name = %q", got)
 	}
-	if got := ExceptionCode(0x2A).Name(); got != "Exceção desconhecida (0x2A)" {
+	if got := ExceptionCode(0x2A).Name(); got != "Unknown exception (0x2A)" {
 		t.Errorf("unknown name = %q", got)
 	}
 	if ExceptionCode(0x2A).Hint() != "" {
@@ -215,7 +215,7 @@ func TestExceptionNames(t *testing.T) {
 
 func TestRequestString(t *testing.T) {
 	r := ReadRequest{Unit: 1, Function: ReadHoldingRegisters, Address: 2, Quantity: 2}
-	if got := r.String(); got != "FC03 · PDU 2 · qtd 2" {
+	if got := r.String(); got != "FC03 · PDU 2 · qty 2" {
 		t.Errorf("String = %q", got)
 	}
 }

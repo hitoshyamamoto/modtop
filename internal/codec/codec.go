@@ -40,9 +40,9 @@ type ReadRequest struct {
 }
 
 // String returns a short description used in the frames panel,
-// e.g. "FC03 · PDU 2 · qtd 2".
+// e.g. "FC03 · PDU 2 · qty 2".
 func (r ReadRequest) String() string {
-	return fmt.Sprintf("FC%02d · PDU %d · qtd %d", r.Function, r.Address, r.Quantity)
+	return fmt.Sprintf("FC%02d · PDU %d · qty %d", r.Function, r.Address, r.Quantity)
 }
 
 // Validate checks the function code and the quantity limits.
@@ -54,13 +54,13 @@ func (r ReadRequest) Validate() error {
 	case ReadHoldingRegisters, ReadInputRegisters:
 		maxQty = MaxRegisters
 	default:
-		return fmt.Errorf("codec: função %d não suportada (apenas leitura: FC01–FC04)", r.Function)
+		return fmt.Errorf("codec: function %d not supported (read-only: FC01–FC04)", r.Function)
 	}
 	if r.Quantity < 1 || r.Quantity > maxQty {
-		return fmt.Errorf("codec: quantidade %d fora do limite 1–%d para FC%02d", r.Quantity, maxQty, r.Function)
+		return fmt.Errorf("codec: quantity %d outside 1–%d for FC%02d", r.Quantity, maxQty, r.Function)
 	}
 	if int(r.Address)+int(r.Quantity) > 65536 {
-		return fmt.Errorf("codec: leitura de %d itens a partir de %d ultrapassa o endereço 65535", r.Quantity, r.Address)
+		return fmt.Errorf("codec: reading %d items from %d goes past address 65535", r.Quantity, r.Address)
 	}
 	return nil
 }
@@ -94,12 +94,12 @@ func EncodePDU(r ReadRequest) ([]byte, error) {
 // decodePDU parses a response PDU for request r.
 func decodePDU(pdu []byte, r ReadRequest) (ReadResponse, error) {
 	if len(pdu) < 2 {
-		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("PDU com %d bytes", len(pdu))}
+		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("PDU of %d bytes", len(pdu))}
 	}
 	switch pdu[0] {
 	case r.Function | exceptionFlag:
 		if len(pdu) != 2 {
-			return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("exceção com %d bytes de PDU (esperados 2)", len(pdu))}
+			return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("exception with %d PDU bytes (expected 2)", len(pdu))}
 		}
 		return ReadResponse{}, &ExceptionError{Function: r.Function, Code: ExceptionCode(pdu[1])}
 	case r.Function:
@@ -108,10 +108,10 @@ func decodePDU(pdu []byte, r ReadRequest) (ReadResponse, error) {
 	}
 	want := r.DataLen()
 	if int(pdu[1]) != want {
-		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("byte count %d (esperado %d)", pdu[1], want)}
+		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("byte count %d (expected %d)", pdu[1], want)}
 	}
 	if len(pdu) != 2+want {
-		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("%d bytes de dados (esperados %d)", len(pdu)-2, want)}
+		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("%d data bytes (expected %d)", len(pdu)-2, want)}
 	}
 	data := pdu[2:]
 	values := make([]uint16, r.Quantity)

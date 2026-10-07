@@ -354,11 +354,11 @@ func TestShortReason(t *testing.T) {
 		{nil, ""},
 		{&codec.ExceptionError{Code: 2}, "exc 02"},
 		{&transport.TimeoutError{}, "timeout"},
-		{&codec.CRCError{}, "CRC inválido"},
-		{&codec.MalformedError{}, "resposta malformada"},
-		{&transport.ConnError{}, "sem conexão"},
-		{&transport.EchoError{}, "eco"},
-		{errors.New("x"), "erro"},
+		{&codec.CRCError{}, "invalid CRC"},
+		{&codec.MalformedError{}, "malformed response"},
+		{&transport.ConnError{}, "no connection"},
+		{&transport.EchoError{}, "echo"},
+		{errors.New("x"), "error"},
 	}
 	for _, tt := range tests {
 		if got := ShortReason(tt.err); got != tt.want {

@@ -28,7 +28,7 @@ const (
 func NormalizeTCPAddr(s string) (string, error) {
 	if host, port, err := net.SplitHostPort(s); err == nil {
 		if host == "" {
-			return "", fmt.Errorf("alvo %q sem host: use host[:porta], ex.: 10.1.8.99:502", s)
+			return "", fmt.Errorf("target %q has no host: use host[:port], e.g. 10.1.8.99:502", s)
 		}
 		return net.JoinHostPort(host, port), nil
 	}
@@ -36,10 +36,10 @@ func NormalizeTCPAddr(s string) (string, error) {
 	if len(host) > 1 && host[0] == '[' && host[len(host)-1] == ']' {
 		host = host[1 : len(host)-1]
 	} else if net.ParseIP(host) != nil && net.ParseIP(host).To4() == nil {
-		return "", fmt.Errorf("alvo %q: endereços IPv6 vão entre colchetes, ex.: [%s]:502", s, host)
+		return "", fmt.Errorf("target %q: IPv6 addresses go in brackets, e.g. [%s]:502", s, host)
 	}
 	if host == "" {
-		return "", fmt.Errorf("alvo %q sem host: use host[:porta], ex.: 10.1.8.99:502", s)
+		return "", fmt.Errorf("target %q has no host: use host[:port], e.g. 10.1.8.99:502", s)
 	}
 	return net.JoinHostPort(host, DefaultTCPPort), nil
 }
@@ -82,15 +82,15 @@ func describeDialError(err error, addr string) string {
 	var dnsErr *net.DNSError
 	switch {
 	case errors.Is(err, syscall.ECONNREFUSED):
-		return fmt.Sprintf("conexão recusada em %s", addr)
+		return fmt.Sprintf("connection refused at %s", addr)
 	case errors.As(err, &dnsErr):
-		return fmt.Sprintf("host não encontrado: %s", addr)
+		return fmt.Sprintf("host not found: %s", addr)
 	case isTimeout(err):
-		return fmt.Sprintf("tempo esgotado ao conectar em %s", addr)
+		return fmt.Sprintf("timed out connecting to %s", addr)
 	case errors.Is(err, syscall.ENETUNREACH), errors.Is(err, syscall.EHOSTUNREACH):
-		return fmt.Sprintf("rede ou host inalcançável: %s", addr)
+		return fmt.Sprintf("network or host unreachable: %s", addr)
 	}
-	return fmt.Sprintf("falha ao conectar em %s: %v", addr, err)
+	return fmt.Sprintf("failed to connect to %s: %v", addr, err)
 }
 
 func isTimeout(err error) bool {
@@ -109,7 +109,7 @@ func (t *TCP) Do(ctx context.Context, req codec.ReadRequest) (codec.ReadResponse
 	if t.conn == nil {
 		if wait := time.Until(t.nextDial); wait > 0 {
 			return codec.ReadResponse{}, &ConnError{
-				Msg: fmt.Sprintf("sem conexão com %s; nova tentativa em %ds", t.addr, int(wait.Seconds()+0.999)),
+				Msg: fmt.Sprintf("no connection to %s; retrying in %ds", t.addr, int(wait.Seconds()+0.999)),
 				Err: t.lastError,
 			}
 		}
@@ -152,7 +152,7 @@ func (t *TCP) Do(ctx context.Context, req codec.ReadRequest) (codec.ReadResponse
 		if errors.As(err, &mismatch) && mismatch.Field == codec.FieldTransaction {
 			// A late response to an earlier request: drop it and keep reading.
 			t.log.Add(Frame{At: time.Now(), Dir: RX, Raw: raw,
-				Note: fmt.Sprintf("transaction ID %d antigo · descartado", mismatch.Got)})
+				Note: fmt.Sprintf("stale transaction ID %d · discarded", mismatch.Got)})
 			continue
 		}
 		note := okNote(req, req.DataLen())
@@ -202,9 +202,9 @@ func (t *TCP) ioFailed(ctx context.Context, err error) error {
 		t.log.Add(Frame{At: time.Now(), Dir: RX, Note: te.Error()})
 		return te
 	}
-	ce := &ConnError{Msg: fmt.Sprintf("conexão perdida com %s: %v", t.addr, err), Err: err}
+	ce := &ConnError{Msg: fmt.Sprintf("connection lost with %s: %v", t.addr, err), Err: err}
 	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
-		ce.Msg = fmt.Sprintf("conexão encerrada pelo dispositivo %s", t.addr)
+		ce.Msg = fmt.Sprintf("connection closed by the device %s", t.addr)
 	}
 	t.log.Add(Frame{At: time.Now(), Dir: RX, Note: ce.Msg})
 	t.connFailed(ce)
