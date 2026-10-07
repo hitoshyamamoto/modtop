@@ -65,8 +65,8 @@ func (r ReadRequest) Validate() error {
 	return nil
 }
 
-// dataLen is the byte count of a normal response to r.
-func (r ReadRequest) dataLen() int {
+// DataLen is the byte count of the data in a normal response to r.
+func (r ReadRequest) DataLen() int {
 	if IsBitFunction(r.Function) {
 		return (int(r.Quantity) + 7) / 8
 	}
@@ -106,7 +106,7 @@ func decodePDU(pdu []byte, r ReadRequest) (ReadResponse, error) {
 	default:
 		return ReadResponse{}, &MismatchError{Field: FieldFunction, Want: int(r.Function), Got: int(pdu[0])}
 	}
-	want := r.dataLen()
+	want := r.DataLen()
 	if int(pdu[1]) != want {
 		return ReadResponse{}, &MalformedError{Reason: fmt.Sprintf("byte count %d (esperado %d)", pdu[1], want)}
 	}
