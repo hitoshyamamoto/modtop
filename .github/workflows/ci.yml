@@ -76,3 +76,14 @@ jobs:
               -o "dist/modtop-linux-$target" ./cmd/modtop
           done
           ls -l dist
+      - name: Clean machine
+        run: |
+          go build -o simserver ./internal/sim/cmd/simserver
+          ./simserver -addr 127.0.0.1:1502 &
+          sleep 1
+          export HOME="$(mktemp -d)"
+          bin=./dist/modtop-linux-amd64
+          "$bin" --help > /dev/null
+          "$bin" --version
+          (sleep 3; printf q) | TERM=xterm script -qec "stty cols 80 rows 24; $bin 127.0.0.1:1502 -r 40001-40004" /dev/null > clean.out
+          grep -q 0x4248 clean.out

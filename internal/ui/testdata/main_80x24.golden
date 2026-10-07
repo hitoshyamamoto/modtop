@@ -1,0 +1,24 @@
+ modtop · 10.1.8.99:502 · unit 1 · 40001–40020 · Modicon · 1s               ● ok
+┌──────────────────────────────────────────────────────────────────────────────┐
+│ Address    Raw      Type      Value                                          │
+│ 40001      0x4248   float32   50.0                 ┐ ABCD                    │
+│ 40002      0x0000             ·                    ┘                         │
+│▶40003      0x8000   float32   1300.0               ┐ CDAB                    │
+│ 40004      0x44A2             ·                    ┘                         │
+│ 40005      0x01F4   uint16    500                                            │
+│ 40006      0xFFF6   int16     -10                                            │
+│ 40007      —        uint16    — (exc 02)                                     │
+│ 40008      0x0064   uint16    100  12s ago · timeout                         │
+│ 40009      0x0000   uint16    0                                              │
+│ 40010      0x0000   uint16    0                                              │
+│ 40011      0x0000   uint16    0                                              │
+│ 40012      0x0000   uint16    0                                              │
+│ 40013      0x0000   uint16    0                                              │
+│ 40014      0x0000   uint16    0                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+ 40003 → Holding register #3 → FC03 → on the wire: 2 (0x0002)
+ ABCD -2.46208e-41 · [CDAB 1300.0] · BADC 1.18132e-38 · DCBA -2.65632e-18
+ ok 1243 · timeouts 2 · exceptions 1 · cycle 38 ms
+
+
+ ↑↓ move  t type  o order  c convention  f frames  p pause  ? help  q quit
