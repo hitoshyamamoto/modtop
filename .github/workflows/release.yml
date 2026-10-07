@@ -24,7 +24,11 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Install socat
-        run: sudo apt-get update && sudo apt-get install -y socat
+        # Bounded so a slow package mirror fails fast instead of hanging the job.
+        timeout-minutes: 5
+        run: |
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update
+          sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y socat
       - name: Test
         run: |
           go vet ./...
