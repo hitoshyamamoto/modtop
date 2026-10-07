@@ -7,7 +7,9 @@ Added, Changed, Deprecated, Removed, Fixed and Security, as needed.
 
 ## [Unreleased]
 
-First version, 0.1.0.
+## [0.1.0] - 2026-10-07
+
+First version.
 
 ### Added
 
