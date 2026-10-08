@@ -7,6 +7,13 @@ Added, Changed, Deprecated, Removed, Fixed and Security, as needed.
 
 ## [Unreleased]
 
+### Added
+
+- Container image on the GitHub Container Registry
+  (`ghcr.io/hitoshyamamoto/modtop`, linux/amd64, arm64, arm/v7) for Modbus
+  TCP use, built from the release binaries and with a provenance
+  attestation.
+
 ## [0.1.0] - 2026-10-07
 
 First version.

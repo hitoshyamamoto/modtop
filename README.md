@@ -51,6 +51,22 @@ Each release also carries a build provenance attestation. With the GitHub CLI yo
 gh attestation verify modtop-linux-arm64 --repo hitoshyamamoto/modtop
 ```
 
+### Container image
+
+For Modbus TCP, modtop is also published as a multi-architecture container image (linux/amd64, arm64, arm/v7) on the GitHub Container Registry. The image holds the same release binary and nothing else.
+
+```sh
+docker run -it --rm ghcr.io/hitoshyamamoto/modtop:0.1.0 10.1.8.99 -u 1 -r 40001-40020
+```
+
+- Add `-v /etc/localtime:/etc/localtime:ro` to show the frame times in local time instead of UTC.
+- To reach a device on the host's network namespace (e.g. an SSH tunnel on `127.0.0.1`), add `--network host`.
+- Check the image's provenance with `gh attestation verify oci://ghcr.io/hitoshyamamoto/modtop:0.1.0 --repo hitoshyamamoto/modtop`.
+
+**For Modbus RTU, use the native binary.** Inside a container, modtop cannot reliably see whether another process on the host is using the serial port, so the one-master-per-bus protection described under [Safety](#safety) would not hold.
+
+### From source
+
 To build from source (Go 1.27 or later):
 
 ```sh

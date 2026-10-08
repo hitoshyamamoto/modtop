@@ -66,3 +66,15 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" dist/* \
             --title "modtop $GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+
+  image:
+    name: Container image
+    needs: release
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    uses: ./.github/workflows/image.yml
+    with:
+      tag: ${{ github.ref_name }}

@@ -56,7 +56,9 @@ After an intended layout change, regenerate them with
    `git tag v0.1.0 && git push origin v0.1.0`.
 3. The release workflow runs the tests, builds the binaries, writes
    `SHA256SUMS`, attests the build provenance and publishes the release with
-   the changelog section as notes.
+   the changelog section as notes. It then publishes the container image
+   `ghcr.io/hitoshyamamoto/modtop` from those binaries (the `image.yml`
+   workflow, which can also be run by hand for an existing tag).
 
 ## Security issues
 
