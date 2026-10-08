@@ -275,3 +275,23 @@ func TestFrameLogRing(t *testing.T) {
 	var nilLog *FrameLog
 	nilLog.Add(Frame{}) // must not panic
 }
+
+// TestTCPPartialFrameTimeoutResyncs is the regression test for a timeout in
+// the middle of a frame leaving the stream out of sync.
+func TestTCPPartialFrameTimeoutResyncs(t *testing.T) {
+	dev, srv := startSim(t)
+	dev.Set(fc3, 0, 1, 2)
+	dev.SetFaults(sim.Faults{Fragments: 3, FragmentDelay: 300 * time.Millisecond})
+	tr, _ := dialSim(t, srv.Addr(), 200*time.Millisecond)
+
+	_, err := tr.Do(context.Background(), req(0, 2))
+	var te *TimeoutError
+	if !errors.As(err, &te) {
+		t.Fatalf("first request: err = %v, want timeout", err)
+	}
+	dev.SetFaults(sim.Faults{})
+	resp, err := tr.Do(context.Background(), req(0, 2))
+	if err != nil || !reflect.DeepEqual(resp.Values, []uint16{1, 2}) {
+		t.Fatalf("after a partial frame: %v, %v; want [1 2]", resp.Values, err)
+	}
+}

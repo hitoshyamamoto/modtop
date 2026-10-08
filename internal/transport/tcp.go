@@ -143,8 +143,13 @@ func (t *TCP) Do(ctx context.Context, req codec.ReadRequest) (codec.ReadResponse
 	}
 
 	for {
-		raw, err := t.readFrame()
+		raw, partial, err := t.readFrame()
 		if err != nil {
+			if partial {
+				// Part of a frame was consumed: the stream is out of sync
+				// and only a new connection can recover it.
+				t.closeConn()
+			}
 			return codec.ReadResponse{}, t.ioFailed(ctx, err)
 		}
 		resp, err := codec.DecodeTCP(raw, req, t.tid)
@@ -167,24 +172,25 @@ func (t *TCP) Do(ctx context.Context, req codec.ReadRequest) (codec.ReadResponse
 	}
 }
 
-// readFrame reads one MBAP frame from the connection.
-func (t *TCP) readFrame() ([]byte, error) {
+// readFrame reads one MBAP frame from the connection. On error, partial
+// reports whether some bytes of the frame were already consumed.
+func (t *TCP) readFrame() (frame []byte, partial bool, err error) {
 	header := make([]byte, 6, 6+254)
-	if _, err := io.ReadFull(t.conn, header); err != nil {
-		return nil, err
+	if n, err := io.ReadFull(t.conn, header); err != nil {
+		return nil, n > 0, err
 	}
-	n, err := codec.TCPFrameLen(header)
+	size, err := codec.TCPFrameLen(header)
 	if err != nil {
 		// The stream is out of sync; only a new connection can recover.
 		t.log.Add(Frame{At: time.Now(), Dir: RX, Raw: header, Note: err.Error()})
 		t.closeConn()
-		return nil, err
+		return nil, false, err
 	}
-	frame := header[:n]
+	frame = header[:size]
 	if _, err := io.ReadFull(t.conn, frame[6:]); err != nil {
-		return nil, err
+		return nil, true, err
 	}
-	return frame, nil
+	return frame, false, nil
 }
 
 // ioFailed classifies a read/write error, logs it and updates the

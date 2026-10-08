@@ -337,3 +337,87 @@ func TestSilentInterval(t *testing.T) {
 		}
 	}
 }
+
+// TestRTULateResponseNotTakenForNext is the regression test for a late
+// answer being accepted as the answer to the next request: RTU has no
+// transaction ID, and two requests of the same size get responses of the
+// same size, so the CRC and byte count cannot tell them apart.
+func TestRTULateResponseNotTakenForNext(t *testing.T) {
+	dev, r, log := rtuSetup(t)
+	dev.Set(fc3, 0, 0xAAAA, 0xBBBB, 0xCCCC)
+	r.cfg.Timeout = 300 * time.Millisecond
+	dev.SetDelay(fc3, 0, 400*time.Millisecond) // answers 100 ms after the timeout
+	dev.SetDelay(fc3, 1, 30*time.Millisecond)  // realistic turnaround
+	dev.SetDelay(fc3, 2, 30*time.Millisecond)
+
+	_, err := r.Do(context.Background(), req(0, 1))
+	var te *TimeoutError
+	if !errors.As(err, &te) {
+		t.Fatalf("first request: err = %v, want timeout", err)
+	}
+	// Without the guard, each answer lands on the next request and every
+	// following value is shifted by one, all of them looking valid.
+	for _, want := range []struct {
+		addr uint16
+		v    uint16
+	}{{1, 0xBBBB}, {2, 0xCCCC}} {
+		resp, err := r.Do(context.Background(), req(want.addr, 1))
+		if err != nil || resp.Values[0] != want.v {
+			t.Fatalf("address %d: %04X, %v; want %04X", want.addr, resp.Values, err, want.v)
+		}
+	}
+	frames, _ := log.Snapshot()
+	found := false
+	for _, f := range frames {
+		if strings.Contains(f.Note, "discarded") {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("the discarded late response is not in the frame log")
+	}
+}
+
+func TestRTUGuardArmedAfterBadFrame(t *testing.T) {
+	dev, r, _ := rtuSetup(t)
+	dev.SetFaults(sim.Faults{BadCRC: true})
+	if _, err := r.Do(context.Background(), req(0, 1)); err == nil {
+		t.Fatal("expected a CRC error")
+	}
+	if !r.unsettled {
+		t.Error("a CRC error must make the next request wait for the line to settle")
+	}
+	dev.SetFaults(sim.Faults{})
+	dev.SetMissing(fc3, 5)
+	_, _ = r.Do(context.Background(), req(0, 1))
+	if _, err := r.Do(context.Background(), req(5, 1)); err == nil {
+		t.Fatal("expected an exception")
+	}
+	if r.unsettled {
+		t.Error("an exception is a clean answer and must not arm the guard")
+	}
+}
+
+func TestRTUPortGone(t *testing.T) {
+	a, b, pid := ptyPair(t)
+	dev := sim.NewDevice(1)
+	serveSim(t, b, dev)
+	r, _ := openRTU(t, testConfig(t, a))
+	if _, err := r.Do(context.Background(), req(0, 1)); err != nil {
+		t.Fatal(err)
+	}
+	// Losing the other end (like unplugging a USB adapter) must surface as
+	// a connection error, not a hang or a timeout.
+	if err := syscall.Kill(pid, syscall.SIGKILL); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(100 * time.Millisecond)
+	var ce *ConnError
+	var err error
+	for i := 0; i < 3 && !errors.As(err, &ce); i++ {
+		_, err = r.Do(context.Background(), req(0, 1))
+	}
+	if !errors.As(err, &ce) {
+		t.Fatalf("err = %v, want ConnError", err)
+	}
+}

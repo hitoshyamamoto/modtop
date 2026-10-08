@@ -44,6 +44,10 @@ type RTU struct {
 	log    *FrameLog
 	silent time.Duration // 3.5 character times
 	lastIO time.Time
+
+	// unsettled is set after a request whose answer may still be on the
+	// line (timeout or bad frame); the next request first drains it.
+	unsettled bool
 }
 
 // OpenRTU checks that the port is free, opens and configures it.
@@ -113,6 +117,11 @@ func (r *RTU) Do(ctx context.Context, req codec.ReadRequest) (codec.ReadResponse
 	if err != nil {
 		return codec.ReadResponse{}, err
 	}
+	if r.unsettled {
+		if err := r.settle(ctx); err != nil {
+			return codec.ReadResponse{}, err
+		}
+	}
 	if wait := r.silent - time.Since(r.lastIO); wait > 0 {
 		time.Sleep(wait)
 	}
@@ -126,6 +135,7 @@ func (r *RTU) Do(ctx context.Context, req codec.ReadRequest) (codec.ReadResponse
 	raw, err := r.readResponse(ctx, req, frame)
 	r.lastIO = time.Now()
 	if err != nil {
+		r.unsettled = true
 		return codec.ReadResponse{}, err
 	}
 	resp, err := codec.DecodeRTU(raw, req)
@@ -134,7 +144,54 @@ func (r *RTU) Do(ctx context.Context, req codec.ReadRequest) (codec.ReadResponse
 		note = err.Error()
 	}
 	r.log.Add(Frame{At: time.Now(), Dir: RX, Raw: raw, Note: note})
+	// After a bad frame the line may still carry stray bytes. An exception
+	// is a clean, complete answer.
+	var exc *codec.ExceptionError
+	r.unsettled = err != nil && !errors.As(err, &exc)
 	return resp, err
+}
+
+// maxDrained bounds what settle keeps for the frame log.
+const maxDrained = 512
+
+// settle runs before a request that follows a failed one. RTU has no
+// transaction ID: a late answer to the previous request, arriving after
+// its timeout, would otherwise be read as the answer to this request (the
+// CRC and byte count cannot tell them apart when both requests have the
+// same size). It reads and discards for up to one timeout, stopping early
+// once bytes have arrived and the line has been quiet for readSlice.
+// Answers later than that are not caught; a slow device needs a longer -t.
+func (r *RTU) settle(ctx context.Context) error {
+	deadline := time.Now().Add(r.cfg.Timeout)
+	var drained []byte
+	var last time.Time
+	tmp := make([]byte, 256)
+	for {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		now := time.Now()
+		if !now.Before(deadline) || (!last.IsZero() && now.Sub(last) >= readSlice) {
+			break
+		}
+		_ = r.port.SetReadTimeout(min(deadline.Sub(now), readSlice))
+		n, err := r.port.Read(tmp)
+		if err != nil {
+			return r.portFailed("read from", err)
+		}
+		if n > 0 {
+			last = time.Now()
+			if len(drained) < maxDrained {
+				drained = append(drained, tmp[:min(n, maxDrained-len(drained))]...)
+			}
+		}
+	}
+	if !last.IsZero() {
+		r.log.Add(Frame{At: time.Now(), Dir: RX, Raw: drained, Note: "late response · discarded"})
+	}
+	r.unsettled = false
+	r.lastIO = time.Now()
+	return nil
 }
 
 // readResponse reads until the expected response size or the timeout.
@@ -154,9 +211,12 @@ func (r *RTU) readResponse(ctx context.Context, req codec.ReadRequest, sent []by
 		if len(buf) >= 2 && codec.IsRTUException(buf[1]) {
 			need = codec.RTUExceptionLen
 		}
-		if bytes.HasPrefix(sent, buf) {
-			// Could still be an echo of the request: read enough to tell.
-			need = max(need, len(sent))
+		if len(buf) >= need && len(buf) < len(sent) && bytes.HasPrefix(sent, buf) {
+			// A whole frame identical to the start of the request may be an
+			// echo of it: read the rest of the request's length to tell.
+			// Never read past the expected frame otherwise, or the start of
+			// the next frame would be consumed.
+			need = len(sent)
 		}
 		if len(buf) >= need {
 			return buf, nil
