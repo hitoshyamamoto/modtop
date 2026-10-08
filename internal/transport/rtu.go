@@ -37,7 +37,9 @@ func (e *EchoError) Error() string {
 // readSlice bounds each blocking read so cancellation is noticed quickly.
 const readSlice = 50 * time.Millisecond
 
-// RTU is a Modbus RTU transport over a local serial port.
+// RTU is a Modbus RTU transport over a local serial port. RTU frames carry
+// no transaction ID, so a request that follows a failed one first lets the
+// line settle (see settle), and reads never go past the expected frame.
 type RTU struct {
 	cfg    RTUConfig
 	port   serial.Port
@@ -200,7 +202,8 @@ func (r *RTU) settle(ctx context.Context) error {
 
 // readResponse reads until the expected response size or the timeout.
 // It does not rely on inter-character silence, which Linux scheduling and
-// USB adapters make unreliable.
+// USB adapters make unreliable. It never reads past the expected frame,
+// except while the bytes received equal the request, to recognize an echo.
 func (r *RTU) readResponse(ctx context.Context, req codec.ReadRequest, sent []byte) ([]byte, error) {
 	deadline := time.Now().Add(r.cfg.Timeout)
 	buf := make([]byte, 0, 256)

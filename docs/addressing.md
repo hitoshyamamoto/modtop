@@ -44,6 +44,8 @@ Examples:
 
 When a manual lists plain numbers ("register 100"), it must also say whether they start at 0 or 1, and which table they belong to. If it does not, compare a known value (a serial number, a nominal voltage) to find out.
 
+Large plain numbers deserve care. A manual that says "register 40000" in base 0 (common with SunSpec devices) means wire address 40000, but `40000` also looks like a Modicon address. In 6-digit Modicon form that register is `440001`, which cannot be misread. modtop refuses such ambiguous input in base 0 and base 1 and shows the 6-digit form to use.
+
 ## The four classic mistakes
 
 ### 1. Off-by-one
