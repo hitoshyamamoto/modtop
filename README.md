@@ -70,12 +70,12 @@ gh attestation verify modtop-linux-arm64 --repo hitoshyamamoto/modtop
 For Modbus TCP, modtop is also published as a multi-architecture container image (linux/amd64, arm64, arm/v7) on the GitHub Container Registry. The image holds the same release binary and nothing else.
 
 ```sh
-docker run -it --rm ghcr.io/hitoshyamamoto/modtop:0.1.1 10.1.8.99 -u 1 -r 40001-40020
+docker run -it --rm ghcr.io/hitoshyamamoto/modtop:0.1.2 10.1.8.99 -u 1 -r 40001-40020
 ```
 
 - Add `-v /etc/localtime:/etc/localtime:ro` to show the frame times in local time instead of UTC.
 - To reach a device on the host's network namespace (e.g. an SSH tunnel on `127.0.0.1`), add `--network host`.
-- Check the image's provenance with `gh attestation verify oci://ghcr.io/hitoshyamamoto/modtop:0.1.1 --repo hitoshyamamoto/modtop`.
+- Check the image's provenance with `gh attestation verify oci://ghcr.io/hitoshyamamoto/modtop:0.1.2 --repo hitoshyamamoto/modtop`.
 
 **For Modbus RTU, use the native binary.** Inside a container, modtop cannot reliably see whether another process on the host is using the serial port, so the one-master-per-bus protection described under [Safety](#safety) would not hold.
 
@@ -188,6 +188,7 @@ Pick the one that makes physical sense (1300.0 W, not -2.46208e-41) and press `o
 | Symptom | What to check |
 |---|---|
 | No response on RTU | Baud, parity and stop bits must match the device. Many devices use parity N (`--parity N`), not the standard E. Check the unit ID and the A/B wiring. |
+| Frequent timeouts, or `late response · discarded` in the frames panel | The device answers more slowly than the timeout. Raise it, e.g. `-t 2s`; on RTU, answers later than about twice the timeout cannot be told apart from the next one. |
 | No response on TCP through a gateway | The unit ID is the address of the device behind the gateway. |
 | No response from a Modbus TCP device addressed directly | Many such devices ignore the unit ID, but some answer only to 255 (`-u 255`), the value the Modbus TCP implementation guide recommends, or only to 1. |
 | Exception 02 (illegal data address) | Wrong table (3xxxx vs 4xxxx) or a base 0/base 1 mix-up. Compare with the neighbors in the list and check the convention in the manual. |
