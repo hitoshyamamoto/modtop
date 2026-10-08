@@ -421,3 +421,52 @@ func TestRTUPortGone(t *testing.T) {
 		t.Fatalf("err = %v, want ConnError", err)
 	}
 }
+
+func TestCheckSerialDevice(t *testing.T) {
+	// /dev/null is held open by every process: it must be reported as not a
+	// serial port, never as a port in use.
+	cfg := RTUConfig{Port: "/dev/null", Baud: 9600, Parity: 'E', StopBits: 1, lockDirs: []string{t.TempDir()}}
+	_, err := OpenRTU(cfg, nil)
+	var oe *PortOpenError
+	if !errors.As(err, &oe) || !strings.Contains(err.Error(), "is not a serial port") {
+		t.Errorf("/dev/null: %v", err)
+	}
+	// A regular file is not a serial port either.
+	f := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(f, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkSerialDevice(f, defaultSysRoot); err == nil || !strings.Contains(err.Error(), "is not a serial port") {
+		t.Errorf("regular file: %v", err)
+	}
+	// A fake sysfs decides by the device class.
+	sys := t.TempDir()
+	charDir := filepath.Join(sys, "dev", "char")
+	ttyDir := filepath.Join(sys, "devices", "platform", "serial", "tty", "ttyS9")
+	memDir := filepath.Join(sys, "devices", "virtual", "mem", "null")
+	for _, d := range []string{charDir, ttyDir, memDir} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Symlink(ttyDir, filepath.Join(charDir, "1:3")); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkSerialDevice("/dev/null", sys); err != nil {
+		t.Errorf("device whose sysfs class is tty: %v", err)
+	}
+	if err := os.Remove(filepath.Join(charDir, "1:3")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(memDir, filepath.Join(charDir, "1:3")); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkSerialDevice("/dev/null", sys); err == nil {
+		t.Error("device whose sysfs class is mem accepted")
+	}
+	// Pseudo-terminals have no sysfs entry and must still be accepted.
+	a, _, _ := ptyPair(t)
+	if err := checkSerialDevice(a, defaultSysRoot); err != nil {
+		t.Errorf("pty: %v", err)
+	}
+}

@@ -49,7 +49,9 @@ func TestParseArgsErrors(t *testing.T) {
 		{[]string{"10.0.0.1", "--table", "holding", "-r", "40001-40002"}, "--table is not used with the modicon convention"},
 		{[]string{"10.0.0.1", "--convention", "base1", "-r", "1-2"}, "needs --table"},
 		{[]string{"10.0.0.1", "--convention", "base2", "-r", "1-2"}, "invalid convention \"base2\""},
-		{[]string{"10.0.0.1", "-u", "248", "-r", "40001-40002"}, "out of range 0–247"},
+		{[]string{"10.0.0.1", "-u", "256", "-r", "40001-40002"}, "out of range 0–255"},
+		{[]string{"/dev/ttyS0", "-u", "248", "-r", "40001-40002"}, "Modbus RTU uses 1–247"},
+		{[]string{"ttyUSB0", "-r", "40001-40002"}, "e.g. /dev/ttyUSB0"},
 		{[]string{"/dev/ttyS0", "-u", "0", "-r", "40001-40002"}, "broadcast (unit 0) is not allowed for reads"},
 		{[]string{"10.0.0.1", "-i", "50ms", "-r", "40001-40002"}, "the minimum is 100ms"},
 		{[]string{"10.0.0.1"}, "missing range"},
@@ -67,13 +69,19 @@ func TestParseArgsErrors(t *testing.T) {
 			t.Errorf("%v: err = %v, want containing %q", tt.args, err, tt.want)
 		}
 	}
-	// TCP with unit 0 is allowed: the target may be a TCP→RTU gateway.
-	if _, err := parseArgs([]string{"10.0.0.1", "-u", "0", "-r", "40001-40002"}, &bytes.Buffer{}); err != nil {
-		t.Errorf("TCP unit 0: %v", err)
+	// TCP accepts 0–255: 0 for gateways, 255 (0xFF) for servers addressed
+	// directly, as the Modbus TCP implementation guide recommends.
+	for _, u := range []string{"0", "247", "248", "255"} {
+		if _, err := parseArgs([]string{"10.0.0.1", "-u", u, "-r", "40001-40002"}, &bytes.Buffer{}); err != nil {
+			t.Errorf("TCP unit %s: %v", u, err)
+		}
 	}
 }
 
 func TestRunExitCodes(t *testing.T) {
+	saved := hasTerminal
+	defer func() { hasTerminal = saved }()
+	hasTerminal = func() bool { return true }
 	var out, errOut bytes.Buffer
 	if code := run([]string{"--help"}, &out, &errOut); code != 0 || !strings.Contains(out.String(), "Usage: modtop") {
 		t.Errorf("--help: %d %q", code, out.String())
@@ -100,6 +108,22 @@ func TestRunExitCodes(t *testing.T) {
 	errOut.Reset()
 	if code := run([]string{"/dev/modtop-missing", "-r", "40001-40002"}, &out, &errOut); code != 3 || !strings.Contains(errOut.String(), "does not exist") {
 		t.Errorf("missing port: %d %q", code, errOut.String())
+	}
+	errOut.Reset()
+	if code := run([]string{"/dev/null", "-r", "40001-40002"}, &out, &errOut); code != 3 || !strings.Contains(errOut.String(), "is not a serial port") {
+		t.Errorf("/dev/null: %d %q", code, errOut.String())
+	}
+
+	// Without a terminal: a clear message, a usage error, and no connection
+	// attempt (the address below would otherwise be refused, exit code 3).
+	hasTerminal = func() bool { return false }
+	errOut.Reset()
+	if code := run([]string{addr, "-r", "40001-40002"}, &out, &errOut); code != 1 || !strings.Contains(errOut.String(), "needs a terminal") {
+		t.Errorf("no terminal: %d %q", code, errOut.String())
+	}
+	// --help and --version need no terminal.
+	if code := run([]string{"--version"}, &out, &errOut); code != 0 {
+		t.Errorf("--version without a terminal: %d", code)
 	}
 }
 

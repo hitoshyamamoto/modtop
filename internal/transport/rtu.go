@@ -22,6 +22,7 @@ type RTUConfig struct {
 	Force    bool // open even if the port seems to be in use
 
 	procRoot string   // tests only
+	sysRoot  string   // tests only
 	lockDirs []string // tests only
 }
 
@@ -75,11 +76,14 @@ func OpenRTU(cfg RTUConfig, log *FrameLog) (*RTU, error) {
 	if cfg.procRoot == "" {
 		cfg.procRoot = defaultProcRoot
 	}
+	if cfg.sysRoot == "" {
+		cfg.sysRoot = defaultSysRoot
+	}
 	if cfg.lockDirs == nil {
 		cfg.lockDirs = defaultLockDirs
 	}
 
-	lock, err := lockPort(cfg.Port, cfg.Force, cfg.procRoot, cfg.lockDirs)
+	lock, err := lockPort(cfg.Port, cfg.Force, cfg.procRoot, cfg.sysRoot, cfg.lockDirs)
 	if err != nil {
 		return nil, err
 	}

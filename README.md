@@ -141,7 +141,7 @@ Run `modtop --help` for all options. The main ones:
 | Option | Meaning |
 |---|---|
 | `-r, --range` | address range, e.g. `40001-40020` (required, up to 250 addresses) |
-| `-u, --unit` | unit ID / slave address, 0–247 (default 1; 0 is refused on RTU) |
+| `-u, --unit` | unit ID (default 1): 0–255 on TCP, slave address 1–247 on RTU |
 | `--convention` | `modicon` (default), `base1` or `base0` |
 | `--table` | `holding`, `input`, `coil` or `discrete`; required with `base1`/`base0` |
 | `--order` | initial byte order of 32-bit pairs: `ABCD` (default), `CDAB`, `BADC`, `DCBA` |
@@ -189,6 +189,7 @@ Pick the one that makes physical sense (1300.0 W, not -2.46208e-41) and press `o
 |---|---|
 | No response on RTU | Baud, parity and stop bits must match the device. Many devices use parity N (`--parity N`), not the standard E. Check the unit ID and the A/B wiring. |
 | No response on TCP through a gateway | The unit ID is the address of the device behind the gateway. |
+| No response from a Modbus TCP device addressed directly | Many such devices ignore the unit ID, but some answer only to 255 (`-u 255`), the value the Modbus TCP implementation guide recommends, or only to 1. |
 | Exception 02 (illegal data address) | Wrong table (3xxxx vs 4xxxx) or a base 0/base 1 mix-up. Compare with the neighbors in the list and check the convention in the manual. |
 | `The RS-485 adapter is echoing…` | The adapter returns what it transmits. It is not supported in this version; check whether its echo can be disabled. |
 | Zeros where you expected values | Some devices answer block reads with 0 for registers that do not exist. Use `--single` to read one register at a time. |
