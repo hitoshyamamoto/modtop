@@ -4,6 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/hitoshyamamoto/modtop?include_prereleases)](https://github.com/hitoshyamamoto/modtop/releases)
 [![Go version](https://img.shields.io/github/go-mod/go-version/hitoshyamamoto/modtop)](go.mod)
 [![License](https://img.shields.io/github/license/hitoshyamamoto/modtop)](LICENSE)
+[![OpenSSF Best Practices](https://www.bestpractices.dev/projects/15299/badge)](https://www.bestpractices.dev/projects/15299)
 
 An interactive terminal tool to **see and understand what a Modbus device is saying**, live, including over SSH on headless field gateways.
 
