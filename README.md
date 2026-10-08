@@ -31,6 +31,20 @@ It is meant for the field engineer or technician commissioning or troubleshootin
 
 modtop is **read-only**: the Modbus write functions are not implemented anywhere in the code. It reads one device and one range of up to 250 addresses per session, over Modbus TCP or Modbus RTU, on Linux (amd64, arm64, armv7).
 
+## Quick start
+
+On a Linux x86-64 machine that can reach a Modbus TCP device:
+
+```sh
+curl -LO https://github.com/hitoshyamamoto/modtop/releases/latest/download/modtop-linux-amd64
+chmod +x modtop-linux-amd64
+./modtop-linux-amd64 10.1.8.99 -u 1 -r 40001-40020
+```
+
+Use your device's address, unit ID and register range from its manual. In
+the list, select a register and press `t` to change its type, `f` to see
+the raw frames, `?` for help and `q` to quit.
+
 ## Installation
 
 Download the binary for your platform from the [releases page](https://github.com/hitoshyamamoto/modtop/releases), check it and make it executable:
@@ -67,11 +81,36 @@ docker run -it --rm ghcr.io/hitoshyamamoto/modtop:0.1.0 10.1.8.99 -u 1 -r 40001-
 
 ### From source
 
-To build from source (Go 1.27 or later):
+With Go 1.27 or later, install the latest release into `$(go env GOPATH)/bin`
+(or `$GOBIN`):
+
+```sh
+go install github.com/hitoshyamamoto/modtop/cmd/modtop@latest
+```
+
+To uninstall, delete that file: `rm "$(go env GOPATH)/bin/modtop"`.
+
+To build from a checkout:
 
 ```sh
 CGO_ENABLED=0 go build -trimpath -ldflags "-s -w" ./cmd/modtop
 ```
+
+Release builds are reproducible; see "Reproducing a release" in
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+### Verifying a release
+
+- Checksums: `sha256sum --check --ignore-missing SHA256SUMS`, as above.
+- Provenance: `gh attestation verify <binary> --repo hitoshyamamoto/modtop`
+  (and `oci://ghcr.io/hitoshyamamoto/modtop:<version>` for the image).
+- Version tags, from v0.1.1 on, are signed with the SSH key in
+  [.github/allowed_signers](.github/allowed_signers):
+
+  ```sh
+  git clone https://github.com/hitoshyamamoto/modtop && cd modtop
+  git -c gpg.ssh.allowedSignersFile=.github/allowed_signers tag -v v0.1.1
+  ```
 
 ## Usage
 
@@ -158,7 +197,7 @@ Pick the one that makes physical sense (1300.0 W, not -2.46208e-41) and press `o
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [GOVERNANCE.md](GOVERNANCE.md). Security issues: [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md), [GOVERNANCE.md](GOVERNANCE.md) and the [ROADMAP.md](ROADMAP.md). How modtop is built: [docs/architecture.md](docs/architecture.md). Security issues: [SECURITY.md](SECURITY.md); security reasoning: [docs/assurance-case.md](docs/assurance-case.md).
 
 ## License
 
