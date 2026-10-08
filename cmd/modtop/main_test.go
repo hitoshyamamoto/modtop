@@ -102,3 +102,17 @@ func TestRunExitCodes(t *testing.T) {
 		t.Errorf("missing port: %d %q", code, errOut.String())
 	}
 }
+
+func TestBuildVersion(t *testing.T) {
+	saved := version
+	defer func() { version = saved }()
+	version = "v9.9.9"
+	if got := buildVersion(); got != "v9.9.9" {
+		t.Errorf("ldflags version: got %q", got)
+	}
+	// Test binaries have no module version, so "dev" is kept.
+	version = "dev"
+	if got := buildVersion(); got != "dev" {
+		t.Errorf("fallback: got %q", got)
+	}
+}

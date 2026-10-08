@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -21,7 +22,19 @@ import (
 )
 
 // version is set at build time with -ldflags "-X main.version=...".
+// Builds without it (e.g. go install) fall back to the module version.
 var version = "dev"
+
+// buildVersion returns the version to report.
+func buildVersion() string {
+	if version != "dev" {
+		return version
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		return bi.Main.Version
+	}
+	return version
+}
 
 // Exit codes (a contract: see the README).
 const (
@@ -121,7 +134,7 @@ func parseArgs(args []string, stdout io.Writer) (*config, error) {
 		return nil, nil
 	}
 	if *showVer {
-		_, _ = fmt.Fprintf(stdout, "modtop %s\n", version)
+		_, _ = fmt.Fprintf(stdout, "modtop %s\n", buildVersion())
 		return nil, nil
 	}
 

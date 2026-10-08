@@ -51,13 +51,44 @@ jobs:
       - name: Vet
         run: go vet ./...
       - name: Test
-        run: go test -race ./...
+        run: go test -race -coverpkg=./... -coverprofile=cover.out ./...
+      - name: Coverage floor (80%)
+        run: |
+          total=$(go tool cover -func=cover.out | awk '/^total:/ { sub("%", "", $NF); print $NF }')
+          echo "statement coverage: ${total}%"
+          awk -v t="$total" 'BEGIN { exit !(t >= 80) }' || { echo "coverage below 80%" >&2; exit 1; }
       - name: Fuzz (short)
         run: |
           go test ./internal/codec -run '^$' -fuzz '^FuzzDecodeTCP$' -fuzztime 30s
           go test ./internal/codec -run '^$' -fuzz '^FuzzDecodeRTU$' -fuzztime 30s
       - name: Vulnerability check
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+
+  dco:
+    name: DCO
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Check Signed-off-by
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Every commit of the pull request must carry a Developer Certificate
+          # of Origin sign-off (git commit -s). See CONTRIBUTING.md.
+          missing=0
+          for c in $(git rev-list --no-merges "$BASE..$HEAD"); do
+            if ! git show -s --format='%(trailers:key=Signed-off-by,valueonly)' "$c" | grep -q '[^[:space:]]'; then
+              echo "::error::commit $c has no Signed-off-by line (use git commit -s)"
+              missing=1
+            fi
+          done
+          exit "$missing"
 
   build:
     name: Build
