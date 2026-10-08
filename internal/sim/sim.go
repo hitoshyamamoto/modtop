@@ -26,8 +26,8 @@ type key struct {
 type Faults struct {
 	BadCRC        bool          // RTU: corrupt the CRC
 	Echo          bool          // RTU: echo the request before the response
-	Fragments     int           // RTU: split the response into this many writes
-	FragmentDelay time.Duration // RTU: delay between fragments
+	Fragments     int           // split the response into this many writes
+	FragmentDelay time.Duration // delay between fragments
 	StaleTID      bool          // TCP: send a copy with the previous transaction ID first
 	CloseConn     bool          // TCP: close the connection instead of answering (one shot)
 }

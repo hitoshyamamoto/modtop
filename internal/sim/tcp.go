@@ -95,7 +95,7 @@ func (s *TCPServer) serve(c net.Conn) {
 				return
 			}
 		}
-		if _, err := c.Write(mbap(tid, header[6], resp)); err != nil {
+		if err := writeFragments(c, mbap(tid, header[6], resp), faults.Fragments, faults.FragmentDelay); err != nil {
 			return
 		}
 	}
