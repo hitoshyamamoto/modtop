@@ -109,7 +109,7 @@ Release builds are reproducible; see "Reproducing a release" in
 
   ```sh
   git clone https://github.com/hitoshyamamoto/modtop && cd modtop
-  git -c gpg.ssh.allowedSignersFile=.github/allowed_signers tag -v v0.1.1
+  git -c gpg.ssh.allowedSignersFile=.github/allowed_signers tag -v v0.1.2
   ```
 
 ## Usage
@@ -153,16 +153,16 @@ Run `modtop --help` for all options. The main ones:
 
 Keys: `↑`/`↓` (or `k`/`j`) move, `PgUp`/`PgDn` page, `Home`/`End` (or `g`/`G`) jump, `t` cycles the type of the row, `o` cycles the byte order of a pair, `c` cycles the address convention shown, `f` opens the frames panel, `p` pauses, `?` shows the help, `q` quits.
 
-A value whose last read failed is never shown as current: it carries its age and the reason (`100  12s ago · timeout`).
+A value whose last read failed is never shown as current: it carries its age and the reason (`100  12s ago · timeout`). An answer is never attributed to the wrong address: on TCP each response is matched by its transaction ID, and on RTU, which has none, the line is drained after a timeout or a bad frame before the next request (see Troubleshooting for slow devices).
 
 ### Exit codes
 
 | Code | Meaning |
 |---|---|
 | 0 | normal exit |
-| 1 | usage error (invalid options or range) |
+| 1 | usage error (invalid options or range, or not run from a terminal) |
 | 2 | reserved |
-| 3 | initial connection failed (TCP refused, serial port missing or no permission) |
+| 3 | initial connection failed (TCP refused or unreachable, serial port missing, not a serial device, or no permission) |
 | 4 | serial port in use |
 | 70 | internal error (a bug; please report it) |
 | 129, 130, 143 | ended by SIGHUP (e.g. SSH drop), Ctrl+C, SIGTERM |
@@ -191,10 +191,13 @@ Pick the one that makes physical sense (1300.0 W, not -2.46208e-41) and press `o
 | Frequent timeouts, or `late response · discarded` in the frames panel | The device answers more slowly than the timeout. Raise it, e.g. `-t 2s`; on RTU, answers later than about twice the timeout cannot be told apart from the next one. |
 | No response on TCP through a gateway | The unit ID is the address of the device behind the gateway. |
 | No response from a Modbus TCP device addressed directly | Many such devices ignore the unit ID, but some answer only to 255 (`-u 255`), the value the Modbus TCP implementation guide recommends, or only to 1. |
+| `"40000" looks like a Modicon address…` | In base 0 or base 1, a 5- or 6-digit number from 10001 up that starts with 0, 1, 3 or 4 is refused, because it is usually a Modicon address. If the manual really means that number, use the 6-digit Modicon form the message gives (base 0 address 40000 is `440001`) with `--convention modicon`. |
 | Exception 02 (illegal data address) | Wrong table (3xxxx vs 4xxxx) or a base 0/base 1 mix-up. Compare with the neighbors in the list and check the convention in the manual. |
 | `The RS-485 adapter is echoing…` | The adapter returns what it transmits. It is not supported in this version; check whether its echo can be disabled. |
 | Zeros where you expected values | Some devices answer block reads with 0 for registers that do not exist. Use `--single` to read one register at a time. |
 | `No permission for /dev/ttyUSB0` | Add your user to the group that owns the port, usually `dialout` (`sudo usermod -aG dialout $USER`, then log in again), or run with sudo. |
+| `… is not a serial port` | The path is not a serial device. Check it with `ls -l /dev/ttyUSB* /dev/ttyACM* /dev/ttyS*`; a name without `/dev/` (e.g. `ttyUSB0`) is not accepted. |
+| `modtop is interactive and needs a terminal` | modtop is a terminal interface and cannot run from a script, a cron job or a pipe. Over SSH, add `-t` (`ssh -t user@gateway modtop …`). |
 | `Port … is in use by process …` | Another program (often the gateway's own runtime) drives the bus. Stop it first; use `--force-port` only if you are sure. |
 
 ## Contributing

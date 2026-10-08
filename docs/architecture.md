@@ -33,9 +33,9 @@ cmd/modtop ──► ui ──► poller ──► transport ──► codec
 
 ## Data flow
 
-1. `cmd/modtop` validates the command line and opens the transport. A
-   failure here ends the program with exit code 1, 3 or 4, before the
-   terminal interface starts.
+1. `cmd/modtop` validates the command line, checks that it runs in a
+   terminal and opens the transport. A failure here ends the program with
+   exit code 1, 3 or 4, before the terminal interface starts.
 2. The poller runs in its own goroutine. Each cycle reads the range in
    blocks (or one address at a time) through `Transport.Do`, updates the
    cells and sends a `CycleResult` on a channel that keeps only the latest
@@ -62,9 +62,16 @@ cmd/modtop ──► ui ──► poller ──► transport ──► codec
   a write function code appears in the sources.
 - **No stale value without its age.** A cell whose last read failed keeps
   its last good value but is always shown with its age and the reason.
-- **One master per serial bus.** A serial port used by another process is
-  refused unless the user forces it, and a forced port is flagged for the
-  whole session.
+- **No answer attributed to the wrong request.** TCP matches each response
+  by its transaction ID and reconnects when a timeout leaves part of a
+  frame unread. RTU has no transaction ID: after a timeout or a bad frame,
+  the next request first drains the line for up to one timeout, and a
+  response is never read past its expected size (except to recognize an
+  echo of the request).
+- **One master per serial bus.** A path that is not a serial device is
+  rejected first (from sysfs, without opening it). A serial port used by
+  another process is refused unless the user forces it, and a forced port
+  is flagged for the whole session.
 - **Zero configuration.** No configuration file, environment variable
   (other than `NO_COLOR`) or network access besides the target.
 

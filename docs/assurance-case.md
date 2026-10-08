@@ -43,7 +43,8 @@ lack of authentication and encryption in Modbus itself (see residual risks).
 - **Least privilege.** modtop needs no root (only access to the serial
   port); the container image runs as an unprivileged user on an empty base.
 - **Complete mediation.** Every response is checked (size, byte count, CRC,
-  transaction, unit, slave and function) before any value is used.
+  transaction, unit, slave and function) before any value is used, and it
+  is only accepted for the request it answers.
 - **Economy of mechanism.** A small code base with five direct
   dependencies and no configuration surface.
 - **Defense in depth** for the serial port: a `/proc` scan, UUCP lock files,
@@ -58,6 +59,7 @@ lack of authentication and encryption in Modbus itself (see residual risks).
 | Improper input validation (CWE-20) | Allowlist validation of all arguments and of every response field | `internal/address`, `internal/codec`, `cmd/modtop`; tests with invalid input |
 | Out-of-bounds read/write (CWE-125, CWE-787) | Memory-safe language, no cgo, no `unsafe`; sizes checked before slicing | fuzzing of both response parsers in CI |
 | Uncontrolled resource consumption (CWE-400) | Bounded frame size (MBAP length ≤ 254), a 200-frame ring buffer, at most 250 addresses, per-request timeouts | `internal/codec/tcp.go`, `internal/transport/framelog.go` |
+| A response attributed to the wrong request (data integrity) | TCP: transaction IDs, and reconnection after a partial frame. RTU (no IDs): the line is drained after a timeout or a bad frame, and reads never go past the expected frame | `internal/transport/tcp.go`, `internal/transport/rtu.go`; regression tests `TestRTULateResponseNotTakenForNext`, `TestTCPPartialFrameTimeoutResyncs` |
 | Race conditions (CWE-362) | One request at a time, channels between goroutines | the race detector on every CI test run |
 | Terminal escape injection (CWE-150) | Device data is shown only as numbers and hex, never as text | `internal/ui/view.go` |
 | Vulnerable dependencies (CWE-1395) | `govulncheck` on every change; Dependabot alerts and updates | `.github/workflows/ci.yml`, `.github/dependabot.yml` |

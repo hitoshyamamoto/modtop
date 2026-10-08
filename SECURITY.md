@@ -38,6 +38,9 @@ You can expect that modtop:
 - talks only to the target you give it, and stores nothing on disk;
 - validates every response before using it, and never crashes or hangs on
   malformed data (the parsers are fuzzed);
+- never attributes an answer to the wrong address (on RTU, which has no
+  transaction ID, this holds for answers up to about twice the timeout
+  late);
 - refuses a serial port that another process is using, unless you pass
   `--force-port`;
 - never shows a value from a failed read as current;

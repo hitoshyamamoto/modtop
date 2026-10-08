@@ -45,6 +45,9 @@ func NormalizeTCPAddr(s string) (string, error) {
 }
 
 // TCP is a Modbus TCP transport: one connection, one request at a time.
+// A late response to an earlier request is recognized by its transaction ID
+// and dropped. A timeout that leaves part of a frame unread closes the
+// connection, since the stream can no longer be resynchronized.
 type TCP struct {
 	addr    string
 	timeout time.Duration
@@ -203,7 +206,8 @@ func (t *TCP) ioFailed(ctx context.Context, err error) error {
 	case ctx.Err() != nil:
 		return ctx.Err()
 	case isTimeout(err):
-		// Keep the connection: a late response is dropped by transaction ID.
+		// Keep the connection (unless Do already closed it after a partial
+		// frame): a late response is dropped by its transaction ID.
 		te := &TimeoutError{After: t.timeout}
 		t.log.Add(Frame{At: time.Now(), Dir: RX, Note: te.Error()})
 		return te
