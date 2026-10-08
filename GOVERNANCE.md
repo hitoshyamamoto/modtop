@@ -83,3 +83,37 @@ One theme per version. A version never mixes themes.
     ## Maintenance (how it is tested without hardware; new dependencies)
     ## Contracts affected
     ## Operational safety
+
+## Decision making
+
+modtop is maintained by one person, who makes the final decisions.
+Proposals and changes are discussed in public, in GitHub issues and pull
+requests, and judged against the criteria above. Every change lands through
+a pull request that must pass the required CI checks; there is no direct
+push to `main`. Disagreements are discussed in the issue or pull request
+thread; the maintainer decides and records the reason there.
+
+## Roles and responsibilities
+
+| Role | Responsibilities | Held by |
+|---|---|---|
+| Maintainer | Triage issues, review and merge pull requests, keep the documentation current, apply this governance | [@hitoshyamamoto](https://github.com/hitoshyamamoto) |
+| Release manager | Prepare the changelog, sign and push version tags, check the published release | [@hitoshyamamoto](https://github.com/hitoshyamamoto) |
+| Security responder | Handle vulnerability reports as described in [SECURITY.md](SECURITY.md) | [@hitoshyamamoto](https://github.com/hitoshyamamoto) |
+| Code of conduct enforcement | Apply [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | [@hitoshyamamoto](https://github.com/hitoshyamamoto) |
+
+## Continuity
+
+Today the project has a bus factor of 1: only the maintainer can merge
+changes and publish releases. What limits the damage if the maintainer
+becomes unavailable:
+
+- The Apache License 2.0 lets anyone fork and continue the project.
+- Everything needed to build, test and release is in the repository. The
+  release workflow needs no stored secrets: it uses the workflow token and
+  keyless signing.
+- The release steps are documented in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+What is missing: a second person with the access to merge and release
+within a week. Adding a co-maintainer is the planned remedy.
+
