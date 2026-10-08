@@ -7,12 +7,29 @@ Added, Changed, Deprecated, Removed, Fixed and Security, as needed.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-08
+
 ### Added
 
 - Container image on the GitHub Container Registry
   (`ghcr.io/hitoshyamamoto/modtop`, linux/amd64, arm64, arm/v7) for Modbus
   TCP use, built from the release binaries and with a provenance
   attestation.
+- `go install github.com/hitoshyamamoto/modtop/cmd/modtop@<version>` now
+  reports the right version in `modtop --version`.
+- Documentation: quick start, architecture, assurance case, security model,
+  roadmap, governance roles, and how to reproduce a release.
+- Version tags are signed (SSH key in `.github/allowed_signers`).
+
+### Changed
+
+- Contributions require a Developer Certificate of Origin sign-off
+  (`git commit -s`), checked in CI.
+
+### Fixed
+
+- Release binaries are built from a clean working tree, so they record
+  `vcs.modified=false` and can be reproduced from the tagged source.
 
 ## [0.1.0] - 2026-10-07
 
