@@ -80,13 +80,30 @@ func TestParseVectors(t *testing.T) {
 func TestAmbiguityMessage(t *testing.T) {
 	_, err := Parse("40001", Base0, tablePtr(HoldingRegister))
 	want := "\"40001\" looks like a Modicon address, but the current convention is base 0.\n" +
-		"Use --convention modicon, or check the convention in the device manual."
+		"If the manual uses Modicon numbering, use --convention modicon.\n" +
+		"If it really means base 0 address 40001, write it in 6-digit Modicon form: 440002 (with --convention modicon)."
 	if err == nil || err.Error() != want {
 		t.Errorf("got %v\nwant %s", err, want)
 	}
+	// SunSpec: base 0 address 40000 is Modicon 440001, not 40001.
+	_, err = Parse("40000", Base0, tablePtr(HoldingRegister))
+	if err == nil || !strings.Contains(err.Error(), "6-digit Modicon form: 440001") {
+		t.Errorf("SunSpec hint: %v", err)
+	}
 	_, err = Parse("30001", Base1, tablePtr(InputRegister))
-	if err == nil || !strings.Contains(err.Error(), "the current convention is base 1.") {
+	if err == nil || !strings.Contains(err.Error(), "the current convention is base 1.") ||
+		!strings.Contains(err.Error(), "6-digit Modicon form: 330001") {
 		t.Errorf("base 1 message: %v", err)
+	}
+	// The suggested form must parse back to the same register.
+	a, err := Parse("440001", Modicon, nil)
+	if err != nil || a != (Addr{HoldingRegister, 40000}) {
+		t.Errorf("440001 = %+v, %v", a, err)
+	}
+	// No register exists beyond 65535: only the first hint is given.
+	_, err = Parse("465537", Base0, tablePtr(HoldingRegister))
+	if err == nil || strings.Contains(err.Error(), "6-digit") {
+		t.Errorf("out-of-range hint: %v", err)
 	}
 }
 

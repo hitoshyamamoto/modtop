@@ -150,12 +150,25 @@ func Format(a Addr, c Convention) string {
 type AmbiguityError struct {
 	Input      string
 	Convention Convention
+	Table      Table
+	Value      uint64 // the number typed, read in Convention
 }
 
 func (e *AmbiguityError) Error() string {
-	return fmt.Sprintf("%q looks like a Modicon address, but the current convention is %s.\n"+
-		"Use --convention modicon, or check the convention in the device manual.",
-		e.Input, e.Convention)
+	msg := fmt.Sprintf("%q looks like a Modicon address, but the current convention is %s.\n"+
+		"If the manual uses Modicon numbering, use --convention modicon.", e.Input, e.Convention)
+	// The same register written in 6-digit Modicon form, which is never
+	// ambiguous. Following only the first hint would read a different
+	// register (e.g. base 0 address 40000 is 440001, not 40001).
+	pdu := e.Value
+	if e.Convention == Base1 {
+		pdu--
+	}
+	if e.Value >= 1 && pdu <= 65535 {
+		msg += fmt.Sprintf("\nIf it really means %s address %s, write it in 6-digit Modicon form: %s (with --convention modicon).",
+			e.Convention, e.Input, Format(Addr{Table: e.Table, PDU: uint16(pdu)}, Modicon))
+	}
+	return msg
 }
 
 // Parse interprets an address typed by the user.
@@ -222,7 +235,7 @@ func parsePlain(s string, c Convention, t Table) (Addr, error) {
 		v = 1 << 32 // too many digits: reported as out of range below
 	}
 	if (len(s) == 5 || len(s) == 6) && strings.IndexByte("0134", s[0]) >= 0 && v >= 10001 {
-		return Addr{}, &AmbiguityError{Input: s, Convention: c}
+		return Addr{}, &AmbiguityError{Input: s, Convention: c, Table: t, Value: v}
 	}
 	if c == Base1 {
 		if v < 1 || v > 65536 {

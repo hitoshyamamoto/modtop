@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/spf13/pflag"
+	"golang.org/x/sys/unix"
 
 	"github.com/hitoshyamamoto/modtop/internal/address"
 	"github.com/hitoshyamamoto/modtop/internal/decode"
@@ -54,7 +55,7 @@ Required:
   -r, --range RANGE     address range, e.g. 40001-40020
 
 Options:
-  -u, --unit N              unit ID / slave address, 0–247 (default 1)
+  -u, --unit N              unit ID: TCP 0–255, RTU slave address 1–247 (default 1)
       --convention C        modicon | base1 | base0 (default modicon)
       --table T             holding | input | coil | discrete
                             (required with base1/base0; not allowed with modicon)
@@ -99,7 +100,10 @@ func usagef(format string, args ...any) error {
 	return &usageError{msg: fmt.Sprintf(format, args...)}
 }
 
-var windowsPort = regexp.MustCompile(`(?i)^com[0-9]+$`)
+var (
+	windowsPort = regexp.MustCompile(`(?i)^com[0-9]+$`)
+	bareTTY     = regexp.MustCompile(`^tty[A-Za-z]*[0-9]+$`)
+)
 
 // parseArgs validates the command line. It returns (nil, nil) when help
 // or version was printed.
@@ -148,6 +152,9 @@ func parseArgs(args []string, stdout io.Writer) (*config, error) {
 	target := fs.Arg(0)
 	if windowsPort.MatchString(target) {
 		return nil, usagef("Windows is not supported in v0.1.")
+	}
+	if bareTTY.MatchString(target) {
+		return nil, usagef("%q is not a host; for a serial port give its full path, e.g. /dev/%s", target, target)
 	}
 	cfg.rtu = strings.HasPrefix(target, "/")
 	if cfg.rtu {
@@ -204,11 +211,16 @@ func parseArgs(args []string, stdout io.Writer) (*config, error) {
 	}
 	cfg.order = o
 
-	if *unit < 0 || *unit > 247 {
-		return nil, usagef("unit ID %d out of range 0–247", *unit)
-	}
-	if cfg.rtu && *unit == 0 {
+	// On TCP the unit ID may be anything up to 255: a server addressed
+	// directly often expects 255 (0xFF), the value the Modbus TCP
+	// implementation guide recommends; a gateway uses it to route.
+	switch {
+	case cfg.rtu && *unit == 0:
 		return nil, usagef("broadcast (unit 0) is not allowed for reads; use the slave address (1–247)")
+	case cfg.rtu && *unit > 247:
+		return nil, usagef("slave address %d out of range: Modbus RTU uses 1–247", *unit)
+	case *unit < 0 || *unit > 255:
+		return nil, usagef("unit ID %d out of range 0–255", *unit)
 	}
 	cfg.unit = byte(*unit)
 
@@ -249,6 +261,30 @@ func parseArgs(args []string, stdout io.Writer) (*config, error) {
 	return &cfg, nil
 }
 
+// hasTerminal reports whether modtop can run its interactive interface:
+// output must go to a terminal, and input must come from one (stdin, or
+// /dev/tty, which the interface opens when stdin is redirected). Tests
+// replace it.
+var hasTerminal = func() bool {
+	if !isTerminal(os.Stdout.Fd()) {
+		return false
+	}
+	if isTerminal(os.Stdin.Fd()) {
+		return true
+	}
+	tty, err := os.OpenFile("/dev/tty", os.O_RDWR, 0)
+	if err != nil {
+		return false
+	}
+	_ = tty.Close()
+	return true
+}
+
+func isTerminal(fd uintptr) bool {
+	_, err := unix.IoctlGetTermios(int(fd), unix.TCGETS)
+	return err == nil
+}
+
 // connect opens the transport and maps failures to exit codes.
 func connect(cfg *config, log *transport.FrameLog) (transport.Transport, int, error) {
 	if cfg.rtu {
@@ -280,6 +316,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 	if cfg == nil {
 		return exitOK
+	}
+	if !hasTerminal() {
+		_, _ = fmt.Fprintln(stderr, "modtop: modtop is interactive and needs a terminal; run it from a terminal (over SSH, use ssh -t).")
+		return exitUsage
 	}
 
 	log := transport.NewFrameLog()

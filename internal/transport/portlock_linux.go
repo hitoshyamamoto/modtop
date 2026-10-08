@@ -7,13 +7,15 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"golang.org/x/sys/unix"
 )
 
-// Defaults for the port-in-use checks; tests point them elsewhere.
+// Defaults for the port checks; tests point them elsewhere.
 var (
 	defaultProcRoot = "/proc"
+	defaultSysRoot  = "/sys"
 	defaultLockDirs = []string{"/var/lock", "/run/lock"}
 )
 
@@ -81,7 +83,10 @@ func (l *portLock) release() {
 //
 // The fourth layer, TIOCEXCL, is applied by the serial library when it
 // opens the port. With force, checks 1–3 do not refuse the port.
-func lockPort(path string, force bool, procRoot string, lockDirs []string) (*portLock, error) {
+func lockPort(path string, force bool, procRoot, sysRoot string, lockDirs []string) (*portLock, error) {
+	if err := checkSerialDevice(path, sysRoot); err != nil {
+		return nil, err
+	}
 	if !force {
 		if pid, name, ok := findPortUser(path, procRoot); ok {
 			return nil, &PortBusyError{Port: path, PID: pid, Process: name}
@@ -103,6 +108,36 @@ func lockPort(path string, force bool, procRoot string, lockDirs []string) (*por
 		return nil, &PortBusyError{Port: path}
 	}
 	return &portLock{fd: fd}, nil
+}
+
+// checkSerialDevice tells, without opening it, whether path can be a serial
+// port. It runs before the in-use checks so that something like /dev/null,
+// which every process holds open, is reported as not a serial port rather
+// than as a port in use. Opening a serial port can toggle its modem lines,
+// so it is not opened here.
+func checkSerialDevice(path, sysRoot string) error {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return &PortOpenError{Port: path, Err: err}
+	}
+	if fi.Mode()&os.ModeCharDevice == 0 {
+		return &PortOpenError{Port: path, Err: unix.ENOTTY}
+	}
+	st, ok := fi.Sys().(*syscall.Stat_t)
+	if !ok {
+		return nil
+	}
+	rdev := uint64(st.Rdev) //nolint:unconvert // Rdev is not uint64 on every platform
+	link := filepath.Join(sysRoot, "dev", "char", fmt.Sprintf("%d:%d", unix.Major(rdev), unix.Minor(rdev)))
+	target, err := filepath.EvalSymlinks(link)
+	if err != nil {
+		// No sysfs entry (pseudo-terminals have none): cannot tell, go on.
+		return nil
+	}
+	if !strings.Contains(target+"/", "/tty/") {
+		return &PortOpenError{Port: path, Err: unix.ENOTTY}
+	}
+	return nil
 }
 
 // findPortUser returns a process, other than this one, with an open
