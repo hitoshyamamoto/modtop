@@ -35,10 +35,12 @@ jobs:
           go test -race ./...
           scripts/check-readonly.sh
       - name: Release notes
+        # Written outside the working tree so the binaries are built from a
+        # clean checkout (vcs.modified=false) and can be reproduced.
         run: |
           ver="${GITHUB_REF_NAME#v}"
-          awk -v h="## [$ver]" 'index($0, h) == 1 { f = 1; next } /^## / { f = 0 } f' CHANGELOG.md > notes.md
-          if ! grep -q '[^[:space:]]' notes.md; then
+          awk -v h="## [$ver]" 'index($0, h) == 1 { f = 1; next } /^## / { f = 0 } f' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
             echo "CHANGELOG.md has no section for $ver" >&2
             exit 1
           fi
@@ -65,7 +67,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" dist/* \
-            --title "modtop $GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+            --title "modtop $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md" --verify-tag
 
   image:
     name: Container image
