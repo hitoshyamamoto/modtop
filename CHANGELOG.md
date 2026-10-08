@@ -7,6 +7,29 @@ Added, Changed, Deprecated, Removed, Fixed and Security, as needed.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-08
+
+### Fixed
+
+- RTU: a late answer to a request that had timed out was taken as the
+  answer to the next request, shifting every following value by one
+  address while showing them as valid. After a timeout or a bad frame,
+  the line is now drained before the next request, and the receive loop
+  no longer reads past the expected frame.
+- TCP: a timeout in the middle of a frame no longer leaves the connection
+  out of sync; it is closed and reopened.
+- The address ambiguity error now gives the 6-digit Modicon form of the
+  address, so following it reads the intended register.
+- A serial path that is not a serial device (e.g. `/dev/null`) is reported
+  as such instead of as a port in use.
+- `ttyUSB0` without `/dev/` is a usage error suggesting the full path.
+- Without a terminal, modtop stops before connecting with a clear message.
+
+### Changed
+
+- `-u` accepts 0–255 on Modbus TCP (255 is the value recommended for a
+  server addressed directly); RTU keeps 1–247.
+
 ## [0.1.1] - 2026-10-08
 
 ### Added
@@ -66,3 +89,6 @@ Each one needs a real field case before it is considered (see
 [GOVERNANCE.md](GOVERNANCE.md)).
 
 - Session profiles in a file (planned theme for 0.2).
+- A compact layout for terminals narrower than 80 columns (SSH from a
+  phone in portrait).
+- Reopening an RTU port after a USB adapter is unplugged and plugged back.

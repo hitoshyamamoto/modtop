@@ -58,12 +58,18 @@ lack of authentication and encryption in Modbus itself (see residual risks).
 | Improper input validation (CWE-20) | Allowlist validation of all arguments and of every response field | `internal/address`, `internal/codec`, `cmd/modtop`; tests with invalid input |
 | Out-of-bounds read/write (CWE-125, CWE-787) | Memory-safe language, no cgo, no `unsafe`; sizes checked before slicing | fuzzing of both response parsers in CI |
 | Uncontrolled resource consumption (CWE-400) | Bounded frame size (MBAP length ≤ 254), a 200-frame ring buffer, at most 250 addresses, per-request timeouts | `internal/codec/tcp.go`, `internal/transport/framelog.go` |
-| Race conditions (CWE-362) | One request at a time, channels between goroutines | the race detector on every CI run |
+| Race conditions (CWE-362) | One request at a time, channels between goroutines | the race detector on every CI test run |
 | Terminal escape injection (CWE-150) | Device data is shown only as numbers and hex, never as text | `internal/ui/view.go` |
 | Vulnerable dependencies (CWE-1395) | `govulncheck` on every change; Dependabot alerts and updates | `.github/workflows/ci.yml`, `.github/dependabot.yml` |
 | Supply chain tampering | SHA-pinned CI actions; reproducible builds; SHA-256 checksums; Sigstore provenance attestations for binaries and image; signed tags | `.github/workflows/release.yml`, `CONTRIBUTING.md` |
 
 ## Residual risks
+
+- **Very late RTU answers.** Modbus RTU has no transaction ID. After a
+  timeout or a bad frame, modtop drains the line for up to one more timeout
+  before the next request, so a late answer is never taken for the next
+  one. An answer later than about twice the timeout could still be; a slow
+  device needs a longer `-t`.
 
 - **Port-in-use detection is best effort.** A process owned by another user
   may be invisible to modtop when it does not run as root, and inside a

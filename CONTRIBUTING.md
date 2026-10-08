@@ -74,10 +74,10 @@ The `DCO` check in CI fails when a commit of a pull request has no sign-off.
 1. In `CHANGELOG.md`, rename `[Unreleased]` to the version and date, e.g.
    `## [0.1.0] - 2026-10-20`, and merge that change.
 2. Create a signed tag on the merge commit and push it:
-   `git tag -s v0.1.1 -m "modtop 0.1.1" && git push origin v0.1.1`.
+   `git tag -s v0.1.2 -m "modtop 0.1.2" && git push origin v0.1.2`.
    Tags are signed with the SSH key listed in
    [.github/allowed_signers](.github/allowed_signers) (git configured with
-   `gpg.format=ssh`); check with `git tag -v v0.1.1`.
+   `gpg.format=ssh`); check with `git tag -v v0.1.2`.
 3. The release workflow runs the tests, builds the binaries, writes
    `SHA256SUMS`, attests the build provenance and publishes the release with
    the changelog section as notes. It then publishes the container image
@@ -92,14 +92,14 @@ binary (`go version -m modtop-linux-amd64`), then:
 
 ```sh
 git clone https://github.com/hitoshyamamoto/modtop && cd modtop
-git checkout v0.1.1
+git checkout v0.1.2
 for t in amd64::amd64 arm64::arm64 arm:7:armv7; do
   IFS=: read -r arch arm name <<< "$t"
   CGO_ENABLED=0 GOOS=linux GOARCH=$arch GOARM=$arm go build -trimpath \
-    -ldflags "-s -w -X main.version=v0.1.1" -o "dist/modtop-linux-$name" ./cmd/modtop
+    -ldflags "-s -w -X main.version=v0.1.2" -o "dist/modtop-linux-$name" ./cmd/modtop
 done
 cd dist
-curl -LO https://github.com/hitoshyamamoto/modtop/releases/download/v0.1.1/SHA256SUMS
+curl -LO https://github.com/hitoshyamamoto/modtop/releases/download/v0.1.2/SHA256SUMS
 sha256sum --check SHA256SUMS
 ```
 

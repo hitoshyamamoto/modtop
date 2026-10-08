@@ -53,7 +53,8 @@ cmd/modtop ──► ui ──► poller ──► transport ──► codec
   a mutex. Results cross goroutines only through channels.
 - Every goroutine started by modtop is guarded: a panic stops the program,
   restores the terminal and exits with code 70.
-- The test suite and the fuzzers run with the race detector in CI.
+- The test suite runs with the race detector in CI; the fuzzers run
+  without it (fuzzing and the race detector are not combined).
 
 ## Properties the design keeps
 
